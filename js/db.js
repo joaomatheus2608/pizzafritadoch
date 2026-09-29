@@ -65,24 +65,23 @@
     }
   }
 
-  // Inicializa o cache com os dados padrão caso não existam
+  // Inicializa o cache com os dados padrão APENAS para chaves que ainda não existem
+  // NUNCA apaga dados existentes por mudança de versão
   function initDefaults() {
-    const isNew = localStorage.getItem(STORAGE_KEYS.DATA_VERSION) !== 'v2.7';
-    if (isNew || !localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-      setStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS);
-      setStored(STORAGE_KEYS.HOURS, window.INITIAL_OPERATING_HOURS);
-      setStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES);
-      setStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
-      setStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS);
-      setStored(STORAGE_KEYS.PROMOTIONS, window.INITIAL_PROMOTIONS || []);
-      setStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS || []);
-      setStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS || []);
-      if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) setStored(STORAGE_KEYS.ORDERS, []);
-      if (!localStorage.getItem(STORAGE_KEYS.USERS)) setStored(STORAGE_KEYS.USERS, []);
-      if (!localStorage.getItem(STORAGE_KEYS.ADDRESSES)) setStored(STORAGE_KEYS.ADDRESSES, []);
-      if (!localStorage.getItem(STORAGE_KEYS.CASH_CLOSINGS)) setStored(STORAGE_KEYS.CASH_CLOSINGS, []);
-      localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v2.6');
-    }
+    // Só preenche uma chave se ela estiver completamente vazia
+    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS))      setStored(STORAGE_KEYS.SETTINGS,      window.INITIAL_SETTINGS);
+    if (!localStorage.getItem(STORAGE_KEYS.HOURS))         setStored(STORAGE_KEYS.HOURS,         window.INITIAL_OPERATING_HOURS);
+    if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES))    setStored(STORAGE_KEYS.CATEGORIES,    window.INITIAL_CATEGORIES);
+    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS))      setStored(STORAGE_KEYS.PRODUCTS,      window.INITIAL_PRODUCTS);
+    if (!localStorage.getItem(STORAGE_KEYS.OPTIONALS))     setStored(STORAGE_KEYS.OPTIONALS,     window.INITIAL_OPTIONALS);
+    if (!localStorage.getItem(STORAGE_KEYS.PROMOTIONS))    setStored(STORAGE_KEYS.PROMOTIONS,    window.INITIAL_PROMOTIONS || []);
+    if (!localStorage.getItem(STORAGE_KEYS.NEIGHBORHOODS)) setStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS || []);
+    if (!localStorage.getItem(STORAGE_KEYS.COURIERS))      setStored(STORAGE_KEYS.COURIERS,      window.INITIAL_COURIERS || []);
+    if (!localStorage.getItem(STORAGE_KEYS.ORDERS))        setStored(STORAGE_KEYS.ORDERS,        []);
+    if (!localStorage.getItem(STORAGE_KEYS.USERS))         setStored(STORAGE_KEYS.USERS,         []);
+    if (!localStorage.getItem(STORAGE_KEYS.ADDRESSES))     setStored(STORAGE_KEYS.ADDRESSES,     []);
+    if (!localStorage.getItem(STORAGE_KEYS.CASH_CLOSINGS)) setStored(STORAGE_KEYS.CASH_CLOSINGS, []);
+    localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v2.7');
   }
 
   initDefaults();
