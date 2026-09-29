@@ -1,0 +1,12 @@
+# Arquivos de sistema e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Arquivo de ambiente local (não existe mais no projeto)
+js/env.js
+.env
+.env.local
+.env.*.local

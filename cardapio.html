@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- SEO & Metatags -->
+  <title>Cardápio Online — Pizza Frita do CH</title>
+  <meta name="title" content="Cardápio Online — Pizza Frita do CH" />
+  <meta name="description" content="Não é pizza, muito menos pastel. É uma experiência única! Peça as melhores pizzas fritas crocantes por fora e irresistíveis por dentro em Jaboatão Centro." />
+  <meta name="theme-color" content="#d97706" />
+  <link rel="canonical" href="cardapio.html" />
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Cardápio Online — Pizza Frita do CH" />
+  <meta property="og:description" content="Sabor em cada mordida! Peça sua Pizza Frita do CH diretamente pelo delivery em Jaboatão Centro." />
+  <meta property="og:image" content="logo.jpg" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="logo.jpg" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Flaticon UIcons CDN -->
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-brands/css/uicons-brands.css">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/style.css?v=2.4.0" />
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- ==========================================
+         HEADER DO CARDÁPIO
+         ========================================== -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-brand" onclick="window.location.href='index.html'">
+          <img src="logo.jpg" alt="Logo Pizza Frita do CH" class="header-logo" />
+          <div class="header-title-group">
+            <h1>Pizza Frita <span>do CH</span></h1>
+            <div id="storeStatusBadge" class="store-status-pill status-open">
+              <span class="status-indicator-dot"></span>
+              <i class="fi fi-sr-circle" style="color: #22c55e; font-size: 0.7em;"></i> Aberto
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <a href="index.html" class="btn-icon-header" title="Página Inicial">
+            <i class="fi fi-sr-home"></i>
+          </a>
+          <button id="userProfileBtn" class="btn-icon-header" title="Minha Conta">
+            <i class="fi fi-sr-user"></i>
+          </button>
+          <button id="headerCartBtn" class="btn-cart-header" title="Meu Carrinho">
+            <i class="fi fi-sr-shopping-cart"></i> <span class="header-cart-text">Carrinho</span>
+            <span id="headerCartCount" class="cart-counter-badge" style="display: none;">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==========================================
+         CONTEÚDO PRINCIPAL (CARDÁPIO)
+         ========================================== -->
+    <main class="main-container">
+      
+      <!-- Alerta de Loja Fechada -->
+      <div id="storeClosedAlert" class="store-closed-banner" style="display: none;"></div>
+
+      <!-- Barra de Pesquisa em Tempo Real -->
+      <div class="search-box-wrapper" style="margin-top: 18px;">
+        <span class="search-icon-symbol"><i class="fi fi-rr-search"></i></span>
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input-field" 
+          placeholder="Pesquisar pizza frita ou bebida..." 
+          autocomplete="off"
+        />
+        <button id="btnClearSearch" class="btn-clear-search">✕</button>
+      </div>
+
+      <!-- Navegação Horizontal por Categorias -->
+      <nav class="category-nav-bar">
+        <div id="categoryNavScroll" class="category-scroll-container hide-scrollbar">
+          <!-- Gerado dinamicamente via JS -->
+        </div>
+      </nav>
+
+      <!-- Seções de Produtos do Cardápio -->
+      <div id="menuSectionsContainer">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+
+    </main>
+
+    <!-- ==========================================
+         FOOTER
+         ========================================== -->
+    <footer class="footer-wrap">
+      <div class="footer-grid-layout">
+        <div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <img src="logo.jpg" alt="Logo Pizza Frita do CH" class="footer-brand-logo" />
+            <h3 style="font-size: 1.3rem;">Pizza Frita <span style="color: var(--primary-yellow);">do CH</span></h3>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; max-width: 380px;">
+            Não é pizza, muito menos pastel. É uma experiência única! Sabor em cada mordida com massa frita artesanal sequinha e recheios generosos.
+          </p>
+          <div class="footer-social-links">
+            <a href="https://wa.me/5581991421295" target="_blank" class="social-button">
+              <i class="fi fi-brands-whatsapp"></i> WhatsApp
+            </a>
+            <a href="https://instagram.com/pizzafritadoch" target="_blank" class="social-button">
+              <i class="fi fi-brands-instagram"></i> @pizzafritadoch
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);"><i class="fi fi-sr-marker" style="color: var(--primary-yellow);"></i> Atendimento</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+            Jaboatão Centro - PE<br />
+            <strong style="color: var(--primary-yellow);">Apenas Delivery</strong>
+          </p>
+        </div>
+
+        <div>
+          <h4 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);"><i class="fi fi-sr-clock" style="color: var(--primary-yellow);"></i> Horário</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+            Todos os dias<br />
+            <strong style="color: var(--primary-yellow);">18:00 às 23:00</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-copyright-bar">
+        <span>&copy; 2026 Pizza Frita do CH. Todos os direitos reservados.</span>
+        <span>Jaboatão Centro - PE</span>
+      </div>
+    </footer>
+
+    <!-- ==========================================
+         BARRA FLUTUANTE DE CARRINHO (MOBILE)
+         ========================================== -->
+    <div id="mobileCartBar" class="mobile-cart-float-bar" style="display: none;">
+      <div class="float-bar-left">
+        <span id="mobileCartCount" class="float-bar-badge">0 itens</span>
+        <span style="font-size: 0.85rem; font-weight: 600;">Ver Carrinho</span>
+      </div>
+      <div id="mobileCartTotal" class="float-bar-total">R$ 0,00</div>
+    </div>
+
+    <!-- ==========================================
+         MODAL DE PRODUTO & TAMANHOS
+         ========================================== -->
+    <div id="productModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-window">
+        <div class="modal-header-bar">
+          <h3 id="productModalTitle">Detalhes do Produto</h3>
+          <button id="btnModalClose" class="btn-close-modal">✕</button>
+        </div>
+
+        <div class="modal-scroll-body">
+          <img id="productModalCover" class="modal-product-cover" src="logo.jpg" alt="Produto" />
+          <p id="productModalDesc" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;"></p>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--primary-yellow); margin-bottom: 16px;" id="productModalPrice">R$ 0,00</div>
+
+          <!-- Seção de Escolha de Tamanho (P, M, G) -->
+          <div id="productModalSizesSection" style="display: none; margin-bottom: 16px;">
+            <div class="modal-subhead">
+              Escolha o Tamanho <span>Obrigatório</span>
+            </div>
+            <div id="productModalSizesList" class="pizza-sizes-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px;">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Seção de Escolha de Sabor (ex: Sucos/Bebidas) -->
+          <div id="productModalFlavorSection" style="display: none; margin-bottom: 16px;">
+            <div class="modal-subhead">
+              <span id="productModalFlavorLabel">Opção</span> <span style="color: var(--primary-yellow); font-weight: 700;">Obrigatório</span>
+            </div>
+            <div id="productModalFlavorList" class="optionals-container" style="margin-top: 8px;">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Seção de Adicionais -->
+          <div id="productModalOptionalsSection">
+            <div class="modal-subhead">
+              Adicionais <span>Escolha quantos quiser</span>
+            </div>
+            <div id="productModalOptionalsList" class="optionals-container">
+              <!-- Renderizado dinamicamente -->
+            </div>
+          </div>
+
+          <!-- Seção Especial de Promoções -->
+          <div id="productModalComboSection" style="display: none;">
+            <div class="modal-subhead">
+              Escolha os itens
+              <span id="productModalComboCountText" class="combo-status-counter">0 escolhidos</span>
+            </div>
+            <div id="productModalComboList" style="margin-top: 10px;">
+              <!-- Renderizado dinamicamente -->
+            </div>
+          </div>
+
+          <!-- Observações do Pedido -->
+          <div class="modal-subhead" style="margin-top: 18px;">
+            Alguma observação? <span>Ex: Sem cebola, bem frito</span>
+          </div>
+          <textarea id="productModalNotes" class="notes-input-box" placeholder="Escreva suas observações para este item..."></textarea>
+        </div>
+
+        <div class="modal-footer-bar">
+          <div class="combo-stepper-control">
+            <button id="btnModalQtyMinus" class="btn-stepper">-</button>
+            <span id="productModalQtyVal" class="stepper-count-display">1</span>
+            <button id="btnModalQtyPlus" class="btn-stepper">+</button>
+          </div>
+          <button id="btnModalAddToCart" class="btn-submit-order" style="flex: 1;">
+            Adicionar ao Carrinho
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         GAVETA DO CARRINHO (CART DRAWER)
+         ========================================== -->
+    <div id="cartDrawer" class="cart-drawer-backdrop" style="display: none;">
+      <div class="cart-drawer-panel">
+        <div class="modal-header-bar">
+          <h3>Seu Pedido</h3>
+          <button id="cartDrawerClose" class="btn-close-modal">✕</button>
+        </div>
+
+        <div id="cartDrawerItems" class="cart-scroll-items">
+          <!-- Renderizado via JS -->
+        </div>
+
+        <div class="cart-summary-footer">
+          <div id="cartMinOrderWarning" class="min-order-warning" style="display: none;">
+            <i class="fi fi-sr-triangle-warning"></i> Pedido mínimo de R$ 15,00.
+          </div>
+
+          <div class="cart-breakdown-row">
+            <span>Subtotal</span>
+            <span id="cartSubtotalVal">R$ 0,00</span>
+          </div>
+          <div class="cart-breakdown-row">
+            <span>Taxa de Entrega</span>
+            <span id="cartDeliveryFeeVal">R$ 5,00</span>
+          </div>
+          <div class="cart-breakdown-row final-total-row">
+            <span>Total</span>
+            <span id="cartTotalVal">R$ 0,00</span>
+          </div>
+
+          <button id="btnGoCheckout" class="btn-submit-order" style="margin-top: 14px;">
+            Continuar para Finalização
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL DE CHECKOUT (100% DELIVERY)
+         ========================================== -->
+    <div id="checkoutModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-window">
+        <div class="modal-header-bar">
+          <h3>Finalizar Pedido Delivery</h3>
+          <button id="checkoutModalClose" class="btn-close-modal">✕</button>
+        </div>
+
+        <div class="modal-scroll-body">
+          
+          <!-- Banner Exclusivo Delivery -->
+          <div style="background: rgba(217, 119, 6, 0.12); border: 1px solid rgba(217, 119, 6, 0.4); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #fbbf24;">
+            <i class="fi fi-sr-motorcycle"></i> Entrega Rápida em Jaboatão Centro e Região
+          </div>
+
+          <!-- Campos de Entrega -->
+          <div id="deliveryAddressFields">
+            <select id="savedAddressesSelect" class="form-text-input" style="margin-bottom: 12px; display: none;">
+              <option value="">📍 Escolher endereço salvo...</option>
+            </select>
+
+            <div class="form-cols-2">
+              <div class="form-field-group">
+                <label class="form-field-label">Rua / Avenida *</label>
+                <input type="text" id="inputStreet" class="form-text-input" placeholder="Ex: Rua Barão de Lucena" required />
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Número *</label>
+                <input type="text" id="inputNumber" class="form-text-input" placeholder="Ex: 123" required />
+              </div>
+            </div>
+
+            <div class="form-cols-2">
+              <div class="form-field-group">
+                <label class="form-field-label">Bairro *</label>
+                <select id="inputNeighborhood" class="form-text-input" required>
+                  <option value="">Selecione o seu bairro...</option>
+                </select>
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Complemento</label>
+                <input type="text" id="inputComplement" class="form-text-input" placeholder="Ex: Apto 101, Bloco B" />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Ponto de Referência</label>
+              <input type="text" id="inputReference" class="form-text-input" placeholder="Ex: Próximo à praça / padaria" />
+            </div>
+          </div>
+
+          <!-- Dados do Cliente -->
+          <div class="modal-subhead">Seus Dados</div>
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Seu Nome *</label>
+              <input type="text" id="inputCustName" class="form-text-input" placeholder="Ex: João Silva" />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">WhatsApp (com DDD) *</label>
+              <input type="tel" id="inputCustPhone" class="form-text-input" placeholder="(81) 99999-9999" />
+            </div>
+          </div>
+
+          <!-- Forma de Pagamento -->
+          <div class="modal-subhead">Forma de Pagamento</div>
+          <div class="payment-methods-row">
+            <div class="payment-method-card selected" data-payment="dinheiro">
+              <i class="fi fi-sr-money-bill-wave"></i> Dinheiro
+            </div>
+            <div class="payment-method-card" data-payment="pix">
+              <i class="fi fi-sr-qr-code"></i> Pix
+            </div>
+            <div class="payment-method-card" data-payment="cartao">
+              <i class="fi fi-sr-credit-card"></i> Cartão
+            </div>
+          </div>
+
+          <!-- Seção de Troco (Dinheiro) -->
+          <div id="cashChangeSection" class="form-field-group">
+            <label class="form-field-label">Troco para quanto? (Deixe em branco se não precisar)</label>
+            <input type="text" id="inputChangeFor" class="form-text-input" placeholder="Ex: 50,00" />
+          </div>
+
+          <!-- Observações Gerais -->
+          <div class="form-field-group">
+            <label class="form-field-label">Observações Gerais do Pedido</label>
+            <textarea id="inputOrderGeneralNotes" class="notes-input-box" placeholder="Algum recado para a entrega ou cozinha?"></textarea>
+          </div>
+
+          <!-- Resumo de Valores -->
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-top: 14px;">
+            <div class="cart-breakdown-row">
+              <span>Subtotal</span>
+              <span id="checkoutSubtotalVal">R$ 0,00</span>
+            </div>
+            <div class="cart-breakdown-row">
+              <span>Entrega</span>
+              <span id="checkoutFeeVal">R$ 5,00</span>
+            </div>
+            <div class="cart-breakdown-row final-total-row">
+              <span>Total a Pagar</span>
+              <span id="checkoutTotalVal">R$ 0,00</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer-bar">
+          <button id="btnConfirmOrder" class="btn-submit-order">
+            Confirmar e Enviar para WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL DE SUCESSO DO PEDIDO
+         ========================================== -->
+    <div id="successModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-window" style="max-width: 460px;">
+        <div class="modal-scroll-body success-card-content">
+          <div class="success-badge-icon">✓</div>
+          <h2 style="font-size: 1.4rem; margin-bottom: 6px;">Pedido Recebido com Sucesso!</h2>
+          <div id="successOrderNum" class="success-order-num">Pedido #0001</div>
+          <p id="successSummaryText" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 18px;"></p>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+            Seu pedido foi registrado em nosso sistema e a mensagem foi gerada para o WhatsApp do restaurante.
+          </p>
+
+          <button id="btnOpenWhatsAppDirect" class="btn-whatsapp-direct">
+            <i class="fi fi-brands-whatsapp"></i> Abrir WhatsApp Novamente
+          </button>
+          
+          <button id="btnSuccessClose" class="btn-ghost-secondary" style="width: 100%; margin-top: 10px;">
+            Voltar ao Cardápio
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL DE CONTA / LOGIN / CADASTRO
+         ========================================== -->
+    <div id="authModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-window" style="max-width: 460px;">
+        <div class="modal-header-bar">
+          <h3 id="authModalTitle">Acessar Conta</h3>
+          <button id="authModalClose" class="btn-close-modal">✕</button>
+        </div>
+
+        <div class="modal-scroll-body">
+          
+          <!-- Formulário de Login -->
+          <div id="authLoginForm">
+            <form id="loginFormElement">
+              <div class="form-field-group">
+                <label class="form-field-label">Telefone (WhatsApp)</label>
+                <input type="tel" id="loginPhone" class="form-text-input" placeholder="(81) 99999-9999" required />
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Senha</label>
+                <input type="password" id="loginPassword" class="form-text-input" placeholder="Sua senha" required />
+              </div>
+              <button type="submit" class="btn-submit-order" style="margin-top: 10px;">Entrar na Conta</button>
+            </form>
+            <p style="text-align: center; margin-top: 16px; font-size: 0.85rem; color: var(--text-muted);">
+              Não tem conta? <button id="btnToggleToRegister" style="color: var(--primary-yellow); font-weight: 700;">Cadastre-se</button>
+            </p>
+          </div>
+
+          <!-- Formulário de Cadastro -->
+          <div id="authRegisterForm" style="display: none;">
+            <form id="registerFormElement">
+              <div class="form-field-group">
+                <label class="form-field-label">Nome Completo</label>
+                <input type="text" id="regName" class="form-text-input" placeholder="Seu nome" required />
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Telefone (WhatsApp)</label>
+                <input type="tel" id="regPhone" class="form-text-input" placeholder="(81) 99999-9999" required />
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Criar Senha</label>
+                <input type="password" id="regPassword" class="form-text-input" placeholder="Mínimo 4 caracteres" required />
+              </div>
+              <button type="submit" class="btn-submit-order" style="margin-top: 10px;">Criar Conta</button>
+            </form>
+            <p style="text-align: center; margin-top: 16px; font-size: 0.85rem; color: var(--text-muted);">
+              Já tem conta? <button id="btnToggleToLogin" style="color: var(--primary-yellow); font-weight: 700;">Fazer Login</button>
+            </p>
+          </div>
+
+          <!-- Portal do Cliente Logado -->
+          <div id="customerPortal" style="display: none;">
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+              <h4 id="portalUserName" style="font-size: 1.1rem; color: var(--text-primary);">Nome</h4>
+              <p id="portalUserPhone" style="font-size: 0.85rem; color: var(--text-muted);">Telefone</p>
+            </div>
+
+            <!-- Endereços Salvos -->
+            <div class="modal-subhead">
+              Meus Endereços
+              <button id="btnNewAddress" style="color: var(--primary-yellow); font-size: 0.8rem; font-weight: 700;">+ Adicionar</button>
+            </div>
+            
+            <div id="newAddressForm" style="display: none; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
+              <input type="text" id="newAddrLabel" class="form-text-input" placeholder="Apelido (ex: Casa, Trabalho)" style="margin-bottom: 6px;" />
+              <input type="text" id="newAddrStreet" class="form-text-input" placeholder="Rua / Avenida" style="margin-bottom: 6px;" />
+              <input type="text" id="newAddrNumber" class="form-text-input" placeholder="Número" style="margin-bottom: 6px;" />
+              <select id="newAddrNeighborhood" class="form-text-input" style="margin-bottom: 6px;">
+                <option value="">Selecione o Bairro...</option>
+              </select>
+              <input type="text" id="newAddrRef" class="form-text-input" placeholder="Ponto de Referência" style="margin-bottom: 8px;" />
+              <div style="display: flex; gap: 8px;">
+                <button id="btnSaveNewAddress" class="btn-submit-order" style="padding: 8px 12px; font-size: 0.85rem;">Salvar</button>
+                <button id="btnCancelNewAddress" class="btn-ghost-secondary" style="padding: 8px 12px; font-size: 0.85rem;">Cancelar</button>
+              </div>
+            </div>
+
+            <div id="portalAddressList"></div>
+
+            <!-- Histórico de Pedidos -->
+            <div class="modal-subhead" style="margin-top: 20px;">Meus Pedidos Recentes</div>
+            <div id="portalOrdersList"></div>
+
+            <button id="btnLogoutCustomer" class="btn-ghost-secondary" style="width: 100%; margin-top: 20px; color: var(--primary-red);">
+              <i class="fi fi-sr-sign-out-alt"></i> Sair da Conta
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts Vanilla JS & Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js?v=2.7.0"></script>
+  <script src="js/config.js?v=2.7.0"></script>
+  <script src="js/seedData.js?v=2.7.0"></script>
+  <script src="js/db.js?v=2.7.0"></script>
+  <script src="js/auth.js?v=2.7.0"></script>
+  <script src="js/cart.js?v=2.7.0"></script>
+  <script src="js/app.js?v=2.7.0"></script>
+</body>
+</html>

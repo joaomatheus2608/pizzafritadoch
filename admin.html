@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pizza Frita do CH — Painel Administrativo</title>
+
+  <link rel="icon" type="image/jpeg" href="logo.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+
+  <!-- Flaticon UIcons CDN -->
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-brands/css/uicons-brands.css">
+
+  <link rel="stylesheet" href="css/style.css?v=2.4.0" />
+  <link rel="stylesheet" href="css/admin.css?v=2.4.0" />
+</head>
+
+<body class="admin-body">
+
+  <!-- ==========================================
+       MODAL DE LOGIN DO ADMINISTRADOR
+       ========================================== -->
+  <div id="adminLoginModal" class="admin-login-modal">
+    <div class="admin-login-box">
+      <img src="logo.jpg" alt="Pizza Frita do CH Logo" />
+      <h2>Painel Administrativo</h2>
+      <p>Gestão de Pedidos & Cardápio — Pizza Frita do CH (Delivery)</p>
+
+      <form id="adminLoginForm">
+        <div class="form-field-group" style="text-align: left; margin-bottom: 16px;">
+          <label class="form-field-label">Senha de Acesso</label>
+          <input type="password" id="adminPasswordInput" class="form-text-input" placeholder="Digite a senha (padrão: admin123)" required
+            autofocus />
+        </div>
+        <button type="submit" class="btn-submit-order" style="width: 100%;">
+          🔓 Entrar no Painel
+        </button>
+      </form>
+
+      <a href="cardapio.html"
+        style="display: inline-block; margin-top: 18px; font-size: 0.82rem; color: var(--text-muted);">
+        ← Voltar ao Cardápio do Cliente
+      </a>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       CONTEÚDO PRINCIPAL DO PAINEL
+       ========================================== -->
+  <div id="adminApp" class="admin-layout-container" style="display: none;">
+
+    <!-- Backdrop escuro para fechar menu no mobile -->
+    <div id="adminMobileNavBackdrop" class="admin-mobile-nav-backdrop"></div>
+
+    <!-- Sidebar Vertical de Navegação -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.jpg" alt="Logo" />
+        <div style="flex: 1; min-width: 0;">
+          <h2>Pizza Frita <span>do CH</span></h2>
+          <span class="sidebar-subtitle">Painel Delivery</span>
+        </div>
+        <button type="button" id="btnCloseMobileNav" class="btn-close-mobile-sidebar" aria-label="Fechar Menu">✕</button>
+      </div>
+
+      <nav class="admin-nav-tabs vertical-nav hide-scrollbar">
+        <button class="admin-tab-btn active" data-tab="orders"><i class="fi fi-sr-motorcycle"></i> Pedidos em Tempo Real</button>
+        <button class="admin-tab-btn" data-tab="dashboard"><i class="fi fi-sr-chart-histogram"></i> Dashboard</button>
+        <button class="admin-tab-btn" data-tab="products"><i class="fi fi-sr-restaurant"></i> Cardápio & Pizzas</button>
+        <button class="admin-tab-btn" data-tab="promotions"><i class="fi fi-sr-flame"></i> Promoções do Dia</button>
+        <button class="admin-tab-btn" data-tab="categories"><i class="fi fi-sr-folder"></i> Categorias</button>
+        <button class="admin-tab-btn" data-tab="optionals"><i class="fi fi-sr-box"></i> Adicionais</button>
+        <button class="admin-tab-btn" data-tab="neighborhoods"><i class="fi fi-sr-marker"></i> Bairros & Taxas</button>
+        <button class="admin-tab-btn" data-tab="cash-closing"><i class="fi fi-sr-dollar"></i> Caixa & Entregadores</button>
+        <button class="admin-tab-btn" data-tab="settings"><i class="fi fi-sr-settings"></i> Configurações da Loja</button>
+      </nav>
+
+      <div class="sidebar-footer-links">
+        <a href="cardapio.html" target="_blank" class="sidebar-footer-btn">
+          <i class="fi fi-sr-globe"></i> Ver Cardápio
+        </a>
+        <button type="button" id="btnSidebarLogout" class="sidebar-footer-btn logout">
+          <i class="fi fi-sr-sign-out-alt"></i> Sair do Painel
+        </button>
+      </div>
+    </aside>
+
+    <!-- Container Principal (Header Superior + Visões) -->
+    <div class="admin-main-container">
+
+      <!-- Header Bar Superior -->
+      <header class="admin-header-bar">
+        <div class="admin-header-left">
+          <button type="button" id="btnToggleMobileNav" class="btn-mobile-nav-toggle" aria-label="Abrir Menu de Abas">
+            <i class="fi fi-sr-menu-burger"></i>
+            <span id="adminMobileActiveTabLabel">Menu</span>
+          </button>
+        </div>
+
+        <div class="admin-header-actions">
+          <button type="button" id="btnToggleStoreStatus" class="store-status-pill status-open"
+            style="cursor: pointer; border: 2px solid transparent; font-weight: 700; transition: all 0.2s;"
+            title="Clique para abrir ou fechar a loja instantaneamente">
+            <span class="status-indicator-dot"></span>
+            <span id="adminStoreStatusText"><i class="fi fi-sr-circle" style="color: #10b981; font-size: 0.8em;"></i> Aberto</span>
+          </button>
+          <button id="btnQuickWhatsapp" class="btn-submit-order hide-on-mobile"
+            style="width: auto; padding: 6px 14px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);">
+            <i class="fi fi-brands-whatsapp"></i> + Pedido Manual Delivery
+          </button>
+          <a href="cardapio.html" target="_blank" class="btn-ghost-secondary hide-on-mobile" style="font-size: 0.82rem;">
+            <i class="fi fi-sr-globe"></i> Ver Cardápio
+          </a>
+          <button type="button" id="btnToggleSound" class="btn-ghost-secondary" style="font-size: 0.85rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;" title="Ativar/desativar campainha de novos pedidos (Clique para testar o som)">
+            <i class="fi fi-sr-bell" id="soundIcon" style="color: #d97706;"></i> <span class="hide-on-mobile" id="soundText">Som Ativo</span>
+          </button>
+          <button id="btnAdminLogout" class="btn-ghost-secondary" style="font-size: 0.82rem; color: var(--primary-red);" title="Sair da Conta">
+            <i class="fi fi-sr-sign-out-alt"></i> <span class="hide-on-mobile">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Visões das Abas -->
+      <main class="admin-main-view">
+
+      <!-- ========================================
+           1. DASHBOARD
+           ======================================== -->
+      <section id="tab-dashboard" class="admin-tab-content" style="display: none;">
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-card-label">Pedidos Hoje</div>
+            <div id="statOrdersToday" class="metric-card-val">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-label">Faturamento Hoje</div>
+            <div id="statRevenueToday" class="metric-card-val">R$ 0,00</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-label">Pedidos em Andamento</div>
+            <div id="statOrdersOngoing" class="metric-card-val">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-label">Ticket Médio</div>
+            <div id="statAverageTicket" class="metric-card-val">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <h3><i class="fi fi-sr-trophy"></i> Produtos Mais Vendidos</h3>
+          </div>
+          <div id="topProductsList">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           2. GERENCIAMENTO DE PEDIDOS
+           ======================================== -->
+      <section id="tab-orders" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <h3>Gestão de Pedidos Recebidos</h3>
+            <button id="btnRefreshOrders" class="btn-ghost-secondary" style="font-size: 0.85rem;">
+              <i class="fi fi-sr-refresh"></i> Atualizar
+            </button>
+          </div>
+
+          <!-- Filtros de Status -->
+          <div class="orders-filter-bar hide-scrollbar">
+            <button class="filter-chip active" data-filter="all">Todos</button>
+            <button class="filter-chip" data-filter="novo">Novo</button>
+            <button class="filter-chip" data-filter="confirmado">Confirmado</button>
+            <button class="filter-chip" data-filter="em_preparo">Em Preparo</button>
+            <button class="filter-chip" data-filter="saiu_para_entrega">Saiu p/ Entrega</button>
+            <button class="filter-chip" data-filter="pronto_para_retirada">Pronto p/ Retirada</button>
+            <button class="filter-chip" data-filter="finalizado">Finalizados</button>
+            <button class="filter-chip" data-filter="cancelado">Cancelados</button>
+          </div>
+
+          <div id="ordersListContainer">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           3. GERENCIAMENTO DE PRODUTOS
+           ======================================== -->
+      <section id="tab-products" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <div>
+              <h3 style="margin-bottom: 2px;">Catálogo de Produtos</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Gerencie preços, fotos, disponibilidade e promoções por dia da semana</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btnOpenDayPromoModal" class="btn-submit-order" style="width: auto; padding: 8px 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="fi fi-sr-flame"></i> + Promoção por Dia
+              </button>
+              <button id="btnOpenAddProduct" class="btn-submit-order" style="width: auto; padding: 8px 16px;">
+                + Novo Produto
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+            <input type="text" id="adminSearchProductInput" class="form-text-input" placeholder="Buscar produto..."
+              style="max-width: 300px;" />
+            <select id="adminFilterCategory" class="form-text-input" style="max-width: 240px;">
+              <option value="all">Todas as categorias</option>
+            </select>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preço Padrão</th>
+                  <th>Promoção por Dia</th>
+                  <th>Status</th>
+                  <th>Disponível</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminProductsTableBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           3.1. GESTÃO DE PROMOÇÕES E OFERTAS DO DIA
+           ======================================== -->
+      <section id="tab-promotions" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <div>
+              <h3 style="margin-bottom: 2px;"><i class="fi fi-sr-flame" style="color: #d97706;"></i> Promoções e Ofertas por Dia</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Controle preços promocionais automáticos por dia da semana (Segunda a Domingo)</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btnOpenAddPromotionTab" class="btn-submit-order" style="width: auto; padding: 8px 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="fi fi-sr-flame"></i> + Nova Promoção por Dia
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas Rápidas de Promoções -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.78rem; color: #64748b; font-weight: 700;">PROMOÇÕES CADASTRADAS</div>
+              <div id="promoStatTotal" style="font-size: 1.3rem; font-weight: 900; color: #0f172a; margin-top: 2px;">0</div>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.78rem; color: #166534; font-weight: 700;">🔥 ATIVAS HOJE</div>
+              <div id="promoStatToday" style="font-size: 1.3rem; font-weight: 900; color: #16a34a; margin-top: 2px;">0</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="adminSearchPromoInput" class="form-text-input" placeholder="Buscar promoção ou produto..." style="max-width: 280px;" />
+            <select id="adminFilterPromoDay" class="form-text-input" style="max-width: 200px;">
+              <option value="all">Todos os Dias</option>
+              <option value="today">🔥 Apenas Ativas Hoje</option>
+              <option value="1">Segunda-feira</option>
+              <option value="2">Terça-feira</option>
+              <option value="3">Quarta-feira</option>
+              <option value="4">Quinta-feira</option>
+              <option value="5">Sexta-feira</option>
+              <option value="6">Sábado</option>
+              <option value="0">Domingo</option>
+            </select>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Produto / Combo</th>
+                  <th>Preço Normal</th>
+                  <th>Preço Promocional</th>
+                  <th>Dias da Semana Ativos</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminPromotionsTableBody">
+                <!-- Renderizado dinamicamente via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           4. GERENCIAMENTO DE CATEGORIAS
+           ======================================== -->
+      <section id="tab-categories" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <h3>Categorias do Cardápio</h3>
+            <button id="btnOpenAddCategory" class="btn-submit-order" style="width: auto; padding: 8px 16px;">
+              + Nova Categoria
+            </button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Ordem</th>
+                  <th>Nome</th>
+                  <th>Slug</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminCategoriesTableBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           6. GERENCIAMENTO DE ADICIONAIS
+           ======================================== -->
+      <section id="tab-optionals" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <h3>Adicionais Cadastrados</h3>
+            <button id="btnOpenAddOptional" class="btn-submit-order" style="width: auto; padding: 8px 16px;">
+              + Novo Adicional
+            </button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Preço Extra</th>
+                  <th>Aplicabilidade</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminOptionalsTableBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           7. CONFIGURAÇÕES DA LOJA
+           ======================================== -->
+      <section id="tab-settings" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <h3>Configurações do Estabelecimento</h3>
+          </div>
+
+          <form id="adminSettingsForm">
+
+            <div class="admin-card-container"
+              style="background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+              <h4 style="color: var(--primary-yellow); margin-bottom: 12px;">Controle de Status da Loja</h4>
+              <div class="form-field-group">
+                <label class="form-field-label">Modo de Funcionamento</label>
+                <select id="settingStatusMode" class="form-text-input">
+                  <option value="auto">Automático por Horário (18:00 às 23:00)</option>
+                  <option value="force_open">Forçar Aberto Agora</option>
+                  <option value="force_closed">Forçar Fechado Agora</option>
+                </select>
+              </div>
+
+              <div class="form-field-group">
+                <label class="form-field-label">Mensagem quando Fechado</label>
+                <input type="text" id="settingClosedMessage" class="form-text-input" />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Valor de Pedido Mínimo (R$)</label>
+              <input type="number" step="1.00" id="settingMinOrder" class="form-text-input" required />
+            </div>
+
+            <div class="form-cols-2">
+              <div class="form-field-group">
+                <label class="form-field-label">WhatsApp Oficial (número com DDI e DDD)</label>
+                <input type="text" id="settingWhatsApp" class="form-text-input" required />
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Instagram Oficial</label>
+                <input type="text" id="settingInstagram" class="form-text-input" required />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Endereço Completo do Restaurante (para Retirada)</label>
+              <input type="text" id="settingAddress" class="form-text-input" required />
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Chave PIX</label>
+              <input type="text" id="settingPixKey" class="form-text-input" />
+            </div>
+
+            <button type="submit" class="btn-submit-order" style="width: auto; padding: 12px 24px;">
+              <i class="fi fi-sr-disk"></i> Salvar Todas as Configurações
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ========================================
+           9. GESTÃO DE BAIRROS E TAXAS DE ENTREGA
+           ======================================== -->
+      <section id="tab-neighborhoods" class="admin-tab-content" style="display: none;">
+        <div class="admin-card-container">
+          <div class="admin-card-header">
+            <div>
+              <h3 style="margin-bottom: 4px;"><i class="fi fi-sr-marker"></i> Bairros & Taxas de Entrega</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Configure os valores das taxas de entrega por bairro
+                atendido</span>
+            </div>
+            <button id="btnOpenAddNeighborhood" class="btn-submit-order"
+              style="width: auto; padding: 8px 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              + Novo Bairro
+            </button>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <input type="text" id="adminSearchNeighborhoodInput" class="form-text-input"
+              placeholder="Buscar bairro..." style="max-width: 320px;" />
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Bairro / Região</th>
+                  <th>Tempo Estimado</th>
+                  <th>Taxa de Entrega (R$)</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminNeighborhoodsTableBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           9. FECHAMENTO DE CAIXA E ENTREGADORES
+           ======================================== -->
+      <section id="tab-cash-closing" class="admin-tab-content" style="display: none;">
+        <!-- Banner de Filtro de Data do Caixa -->
+        <div class="admin-card-container"
+          style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 20px; border-radius: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <div>
+              <h2 style="font-size: 1.3rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px;">
+                <i class="fi fi-sr-dollar"></i> Fechamento de Caixa Diário & Acerto de Entregadores
+              </h2>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
+                Acompanhe o faturamento total do dia e o extrato individual de cada motoboy (Paulo, Marcos, Hernandes).
+              </p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <input type="date" id="cashReportDatePicker" class="form-text-input"
+                style="background: #334155; color: #fff; border-color: #475569; width: auto; font-weight: 700;" />
+              <button type="button" id="btnCashToday" class="btn-ghost-secondary"
+                style="font-size: 0.82rem; background: #334155; color: #fff; border-color: #475569;">
+                Hoje
+              </button>
+              <button type="button" id="btnCashYesterday" class="btn-ghost-secondary"
+                style="font-size: 0.82rem; background: #334155; color: #fff; border-color: #475569;">
+                Ontem
+              </button>
+              <button type="button" id="btnOpenManualCashClose" class="btn-submit-order"
+                style="width: auto; padding: 8px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fi fi-sr-lock"></i> Fechar Caixa Manualmente
+              </button>
+              <button type="button" id="btnPrintDailyCash" class="btn-submit-order"
+                style="width: auto; padding: 8px 14px; font-size: 0.82rem; background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
+                <i class="fi fi-sr-print"></i> Imprimir Fechamento
+              </button>
+            </div>
+          </div>
+          <div id="cashStatusBannerRow"
+            style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div id="cashCurrentStatusBadge"
+              style="font-size: 0.85rem; font-weight: 700; color: #34d399; display: flex; align-items: center; gap: 6px;">
+              <i class="fi fi-sr-circle" style="color: #34d399;"></i> Caixa Aberto (Expediente em Andamento)
+            </div>
+            <div style="font-size: 0.78rem; color: #94a3b8;">
+              Fechamento 100% manual: você decide a hora exata de encerrar o caixa da noite.
+            </div>
+          </div>
+        </div>
+
+        <!-- Métricas Gerais do Caixa do Dia -->
+        <div class="metrics-row" style="margin-bottom: 20px;">
+          <div class="metric-card" style="border-top: 4px solid #10b981;">
+            <div class="metric-card-label">Faturamento Total do Dia</div>
+            <div id="cashStatTotalRevenue" class="metric-card-val" style="color: #10b981;">R$ 0,00</div>
+            <span style="font-size: 0.75rem; color: #64748b;">(Produtos + Taxas)</span>
+          </div>
+          <div class="metric-card" style="border-top: 4px solid #2563eb;">
+            <div class="metric-card-label">Total em Dinheiro</div>
+            <div id="cashStatCashTotal" class="metric-card-val" style="color: #2563eb;">R$ 0,00</div>
+            <span style="font-size: 0.75rem; color: #64748b;">Em caixa / motoboys</span>
+          </div>
+          <div class="metric-card" style="border-top: 4px solid #8b5cf6;">
+            <div class="metric-card-label">Total em PIX</div>
+            <div id="cashStatPixTotal" class="metric-card-val" style="color: #8b5cf6;">R$ 0,00</div>
+            <span style="font-size: 0.75rem; color: #64748b;">Conta bancária</span>
+          </div>
+          <div class="metric-card" style="border-top: 4px solid #f59e0b;">
+            <div class="metric-card-label">Total em Cartão</div>
+            <div id="cashStatCardTotal" class="metric-card-val" style="color: #f59e0b;">R$ 0,00</div>
+            <span style="font-size: 0.75rem; color: #64748b;">Maquininhas</span>
+          </div>
+        </div>
+
+        <!-- Resumo por Canais de Venda -->
+        <div class="admin-card-container" style="margin-bottom: 20px;">
+          <div class="admin-card-header" style="margin-bottom: 12px;">
+            <h3><i class="fi fi-sr-chart-histogram"></i> Vendas por Canal</h3>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;"><i class="fi fi-sr-utensils"></i> Mesas (Salão)</div>
+              <div id="cashChannelMesa" style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-top: 4px;">
+                R$ 0,00 (0 pedidos)</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;"><i class="fi fi-sr-shopping-bag"></i> Balcão / Viagem</div>
+              <div id="cashChannelBalcao"
+                style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-top: 4px;">R$ 0,00 (0 pedidos)</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;"><i class="fi fi-sr-motorcycle"></i> Delivery (Entregas)</div>
+              <div id="cashChannelDelivery"
+                style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-top: 4px;">R$ 0,00 (0 pedidos)</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+              <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;"><i class="fi fi-sr-motorcycle"></i> Total de Taxas de Entrega</div>
+              <div id="cashTotalDeliveryFees"
+                style="font-size: 1.15rem; font-weight: 800; color: #d97706; margin-top: 4px;">R$ 0,00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GESTÃO & ACERTO DOS ENTREGADORES -->
+        <div class="admin-card-container">
+          <div class="admin-card-header" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="margin-bottom: 2px;"><i class="fi fi-sr-motorcycle"></i> Entregadores & Motoboys</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Gestão da equipe de entregas e acertos de corridas</span>
+            </div>
+            <button type="button" id="btnOpenAddCourier" class="btn-submit-order" style="width: auto; padding: 7px 14px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fi fi-sr-plus-small"></i> + Novo Entregador
+            </button>
+          </div>
+
+          <div id="couriersReportContainer" class="courier-cards-grid">
+            <!-- Renderizado via JS -->
+          </div>
+
+          <!-- Tabela de Gerenciamento de Entregadores -->
+          <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+            <h4 style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;"><i class="fi fi-sr-users"></i> Equipe de Entregadores Cadastrados</h4>
+            <div style="overflow-x: auto;">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Nome do Entregador</th>
+                    <th>WhatsApp / Telefone</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="adminCouriersTableBody">
+                  <!-- Renderizado via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTÓRICO DE FECHAMENTOS DE CAIXA -->
+        <div class="admin-card-container" style="margin-top: 20px;">
+          <div class="admin-card-header" style="margin-bottom: 12px;">
+            <div>
+              <h3 style="margin-bottom: 2px;"><i class="fi fi-sr-document-signed"></i> Histórico de Caixas Fechados</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Registros oficiais dos fechamentos diários
+                manuais</span>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Data do Caixa</th>
+                  <th>Fechado em</th>
+                  <th>Total Pedidos</th>
+                  <th>Faturamento Total</th>
+                  <th>Dinheiro</th>
+                  <th>PIX</th>
+                  <th>Cartão</th>
+                  <th>Observações</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="cashClosingsHistoryTableBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+  <!-- ==========================================
+       MODAL DE PDV / LANÇADOR DE PEDIDOS (MESA E BALCÃO)
+       ========================================== -->
+  <div id="posOrderModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-window pos-modal-window">
+      <div class="modal-header-bar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 style="margin: 0;">Lançar Pedido</h3>
+          <span id="posTargetBadge" class="pos-target-badge">🪑 Mesa 01</span>
+        </div>
+        <button id="btnPosModalClose" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="pos-modal-layout">
+        <!-- Coluna Esquerda: Catálogo e Seleção -->
+        <div class="pos-catalog-section">
+          <!-- Dados do Cliente -->
+          <div class="pos-customer-bar">
+            <div class="form-cols-2">
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Nome do Cliente / Identificação</label>
+                <input type="text" id="posCustomerName" class="form-text-input"
+                  placeholder="Ex: Lucas / Casal da janela" />
+              </div>
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">WhatsApp (Opcional)</label>
+                <input type="tel" id="posCustomerPhone" class="form-text-input" placeholder="(81) 99999-9999" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtro de Categorias -->
+          <div id="posCategoryFilters" class="pos-categories-nav hide-scrollbar">
+            <!-- Renderizado via JS -->
+          </div>
+
+          <!-- Busca Rápida -->
+          <div style="margin-bottom: 12px;">
+            <input type="text" id="posSearchProductInput" class="form-text-input"
+              placeholder="🔍 Buscar no cardápio..." />
+          </div>
+
+          <!-- Grade de Produtos -->
+          <div id="posProductsCatalogGrid" class="pos-products-grid hide-scrollbar">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Comanda Atual / Carrinho -->
+        <div class="pos-cart-section">
+          <div class="pos-cart-header">
+            <h4><i class="fi fi-sr-document"></i> Comanda Atual</h4>
+            <button id="btnPosClearCart" class="btn-ghost-secondary"
+              style="font-size: 0.75rem; padding: 3px 8px; color: var(--primary-red);">
+              Limpar
+            </button>
+          </div>
+
+          <div id="posCartItemsList" class="pos-cart-items-list hide-scrollbar">
+            <div class="pos-cart-empty">
+              <span>Nenhum item adicionado</span>
+              <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Toque nos produtos ao lado para incluir na
+                comanda.</p>
+            </div>
+          </div>
+
+          <div class="pos-cart-footer">
+            <div class="form-field-group" style="margin-bottom: 8px;">
+              <label class="form-field-label" style="font-size: 0.75rem;">Observação Geral da Comanda</label>
+              <input type="text" id="posGeneralNotes" class="form-text-input"
+                placeholder="Ex: Caprichar no molho / Entregar tudo junto"
+                style="font-size: 0.82rem; padding: 6px 10px;" />
+            </div>
+
+            <div class="form-field-group" style="margin-bottom: 10px;">
+              <label class="form-field-label" style="font-size: 0.75rem;">Forma de Pagamento</label>
+              <select id="posPaymentSelect" class="form-text-input" style="font-size: 0.85rem; padding: 6px 10px;">
+                <option value="pendente">Pagar no Fechamento da Mesa</option>
+                <option value="pix">PIX (Imediato)</option>
+                <option value="cartao">Cartão (Débito/Crédito)</option>
+                <option value="dinheiro">Dinheiro</option>
+              </select>
+            </div>
+
+            <div class="pos-cart-total-row">
+              <span>Total da Rodada:</span>
+              <strong id="posCartTotalValue">R$ 0,00</strong>
+            </div>
+
+            <button id="btnSubmitPosOrder" class="btn-submit-order" style="margin-top: 10px; width: 100%;">
+              <i class="fi fi-sr-rocket-lunch"></i> Lançar Pedido
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE CUSTOMIZAÇÃO RÁPIDA DE ITEM PDV
+       ========================================== -->
+  <div id="posItemCustomModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 480px;">
+      <div class="modal-header-bar">
+        <h3 id="posCustomItemTitle" style="font-size: 1.1rem;">Personalizar Item</h3>
+        <button id="btnPosCustomItemClose" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 12px;" id="posCustomItemDescription"></div>
+        <div style="font-size: 1rem; font-weight: 800; color: #d97706; margin-bottom: 16px;">
+          Preço Base: <span id="posCustomItemBasePrice">R$ 0,00</span>
+        </div>
+
+        <!-- Seção de Escolha de Sabor Único (ex: Sucos) -->
+        <div id="posCustomFlavorSection"
+          style="display: none; margin-bottom: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px;">
+          <h4 id="posCustomFlavorTitle" style="font-size: 0.88rem; font-weight: 700; color: #166534; margin-bottom: 8px;">Escolha o Sabor:</h4>
+          <div id="posCustomFlavorChoices" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+
+        <!-- Seção de Escolha de Combo / Seleção Múltipla -->
+        <div id="posCustomComboSection"
+          style="display: none; margin-bottom: 16px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 12px;">
+          <h4 id="posCustomComboTitle" style="font-size: 0.88rem; color: #92400e; margin-bottom: 8px;">Escolha os lanches do combo:</h4>
+          <div id="posCustomComboChoices"></div>
+        </div>
+
+        <!-- Seção de Tamanho do Hambúrguer (Tradicional vs Duplo +R$ 5) -->
+        <div id="posCustomBurgerSizeSection" style="display: none; margin-bottom: 16px; background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px;">
+          <h4 style="font-size: 0.88rem; font-weight: 700; color: #9d174d; margin-bottom: 8px;">🍔 Versão do Hambúrguer:</h4>
+          <div style="display: flex; gap: 10px;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #ec4899; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: #831843;">
+              <input type="radio" name="posBurgerSize" value="tradicional" checked />
+              <span>Tradicional (1 Carne)</span>
+            </label>
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #cbd5e1; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: #334155;">
+              <input type="radio" name="posBurgerSize" value="duplo" />
+              <span>Duplo (+ R$ 5,00)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Seção de Adicionais / Opcionais -->
+        <div id="posCustomOptionalsSection" style="margin-bottom: 16px;">
+          <h4 style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Adicionais / Opcionais:
+          </h4>
+          <div id="posCustomOptionalsList" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Checkboxes de adicionais via JS -->
+          </div>
+        </div>
+
+        <!-- Observações do Item -->
+        <div class="form-field-group">
+          <label class="form-field-label">Observações deste Item</label>
+          <input type="text" id="posCustomItemNotes" class="form-text-input"
+            placeholder="Ex: Sem cebola, ponto bem passado, sem picles" />
+        </div>
+
+        <!-- Quantidade -->
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <span style="font-weight: 700; font-size: 0.9rem;">Quantidade:</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button type="button" id="btnPosCustomQtyMinus" class="btn-qty-step">-</button>
+            <span id="posCustomItemQty"
+              style="font-size: 1.1rem; font-weight: 800; width: 24px; text-align: center;">1</span>
+            <button type="button" id="btnPosCustomQtyPlus" class="btn-qty-step">+</button>
+          </div>
+        </div>
+
+        <button type="button" id="btnConfirmCustomItem" class="btn-submit-order" style="width: 100%;">
+          Adicionar ao Pedido • <span id="posCustomItemSubtotal">R$ 0,00</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE EXTRATO DA MESA & FECHAMENTO DE CONTA
+       ========================================== -->
+  <div id="tableDetailsModal" class="modal-backdrop" style="display: none; z-index: 1050;">
+    <div class="modal-window" style="max-width: 560px;">
+      <div class="modal-header-bar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 id="tableDetailsTitle" style="margin: 0;">Comanda Mesa 01</h3>
+          <span id="tableDetailsStatusBadge" class="order-type-badge mesa"><i class="fi fi-sr-circle" style="font-size: 0.7em;"></i> Ocupada</span>
+        </div>
+        <button id="btnTableDetailsClose" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <div class="table-summary-info-box">
+          <div><strong>Cliente:</strong> <span id="tableDetailsCustomer">Cliente não identificado</span></div>
+          <div><strong>Horário de Abertura:</strong> <span id="tableDetailsTime">--:--</span></div>
+          <div><strong>Total de Rodadas/Pedidos:</strong> <span id="tableDetailsOrdersCount">0</span></div>
+        </div>
+
+        <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 16px 0 8px;">Itens Consumidos na Mesa
+        </h4>
+        <div
+          style="max-height: 240px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; background: #ffffff;">
+          <table class="order-items-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Item / Pedido</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody id="tableDetailsItemsBody">
+              <!-- Renderizado via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-bill-total-bar">
+          <span>Total Acumulado da Conta:</span>
+          <strong id="tableDetailsGrandTotal">R$ 0,00</strong>
+        </div>
+
+        <!-- Seção de Fechamento de Pagamento -->
+        <div
+          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-top: 16px;">
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;"><i class="fi fi-sr-credit-card"></i> Fechamento da Conta
+          </h4>
+          <div class="form-field-group">
+            <label class="form-field-label">Forma de Pagamento Final</label>
+            <select id="tableClosePaymentMethod" class="form-text-input">
+              <option value="dinheiro">Dinheiro</option>
+              <option value="pix">PIX</option>
+              <option value="cartao">Cartão (Débito/Crédito)</option>
+            </select>
+          </div>
+
+          <div id="tableCloseChangeGroup" class="form-field-group" style="display: block;">
+            <label class="form-field-label">Troco para (R$) - Opcional</label>
+            <input type="number" step="1.00" id="tableCloseChangeFor" class="form-text-input" placeholder="Ex: 50.00" />
+          </div>
+        </div>
+
+        <!-- Botões de Ação da Mesa -->
+        <div class="table-details-actions">
+          <button type="button" id="btnTableAddMoreItems" class="btn-ghost-secondary"
+            style="font-weight: 700; color: #d97706; border-color: #d97706;">
+            <i class="fi fi-sr-plus-small"></i> Lançar Mais Itens
+          </button>
+          <button type="button" id="btnTablePrintBill" class="btn-ghost-secondary">
+            <i class="fi fi-sr-print"></i> Imprimir Prévia da Conta
+          </button>
+          <button type="button" id="btnTableCloseBill" class="btn-submit-order"
+            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i class="fi fi-sr-check"></i> Receber e Liberar Mesa
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="productEditModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-window" style="max-width: 520px;">
+      <div class="modal-header-bar">
+        <h3 id="productEditModalTitle">Editar Produto</h3>
+        <button id="btnProductEditClose" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <form id="productEditForm">
+          <input type="hidden" id="editProdId" />
+
+          <div class="form-field-group">
+            <label class="form-field-label">Nome do Produto *</label>
+            <input type="text" id="editProdName" class="form-text-input" required />
+          </div>
+
+          <div class="form-field-group">
+            <label class="form-field-label">Categoria *</label>
+            <select id="editProdCategory" class="form-text-input" required>
+              <!-- Categorias -->
+            </select>
+          </div>
+
+          <div class="form-field-group">
+            <label class="form-field-label">Descrição</label>
+            <textarea id="editProdDescription" class="notes-input-box"></textarea>
+          </div>
+
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Preço (R$) - deixe vazio se a definir</label>
+              <input type="number" step="0.50" id="editProdPrice" class="form-text-input" placeholder="Ex: 28.00" />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Disponibilidade</label>
+              <select id="editProdAvailable" class="form-text-input">
+                <option value="true">Disponível</option>
+                <option value="false">Esgotado / Indisponível</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field-group">
+            <label class="form-field-label">Imagem do Produto (Upload do computador)</label>
+            <input type="hidden" id="editProdImage" />
+            <input type="file" id="editProdFileInput" accept="image/*" class="form-text-input" style="padding: 8px;" />
+
+            <div id="editProdImagePreviewWrap" style="display: none; align-items: center; gap: 12px; margin-top: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px;">
+              <img id="editProdImagePreview" src="" alt="Prévia da Imagem" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;" />
+              <div style="flex: 1; min-width: 0;">
+                <span id="editProdFileName" style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px;">Imagem Selecionada</span>
+                <button type="button" id="btnRemoveProdImage" style="font-size: 0.78rem; color: #ef4444; background: none; border: none; cursor: pointer; padding: 0; margin-top: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                  <i class="fi fi-sr-trash"></i> Remover Imagem
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opções de Tamanho da Pizza Frita (P, M, G) -->
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label style="font-weight: 800; font-size: 0.9rem; color: #1e40af; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="editProdHasSizes" />
+                <span>🍕 Pizza Frita com 3 Tamanhos (P, M, G)</span>
+              </label>
+            </div>
+            <div id="editProdSizesFields" style="display: none; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Preço P (R$)</label>
+                <input type="number" step="0.50" id="editProdPriceP" class="form-text-input" placeholder="Ex: 25.00" />
+              </div>
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Preço M (R$)</label>
+                <input type="number" step="0.50" id="editProdPriceM" class="form-text-input" placeholder="Ex: 34.00" />
+              </div>
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Preço G (R$)</label>
+                <input type="number" step="0.50" id="editProdPriceG" class="form-text-input" placeholder="Ex: 44.00" />
+              </div>
+            </div>
+          </div>
+
+
+
+          <!-- Promoção por Dia da Semana no Produto -->
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 14px; margin-top: 14px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label style="font-weight: 800; font-size: 0.9rem; color: #92400e; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="editProdHasDayPromo" />
+                <span>🔥 Promoção por Dia da Semana</span>
+              </label>
+            </div>
+            <div id="editProdDayPromoFields" style="display: none;">
+              <div class="form-cols-2">
+                <div class="form-field-group">
+                  <label class="form-field-label">Preço Promocional (R$) *</label>
+                  <input type="number" step="0.50" id="editProdPromoPrice" class="form-text-input" placeholder="Ex: 40.00" />
+                </div>
+                <div class="form-field-group">
+                  <label class="form-field-label">Rótulo / Badge (Opcional)</label>
+                  <input type="text" id="editProdPromoLabel" class="form-text-input" placeholder="Ex: R$ 40 na Seg" />
+                </div>
+              </div>
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Dias com Preço Promocional Ativo:</label>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="editProdPromoDaysContainer">
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="1" /> Seg
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="2" /> Ter
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="3" /> Qua
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="4" /> Qui
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="5" /> Sex
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="6" /> Sáb
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; background: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #fde68a;">
+                    <input type="checkbox" name="editProdPromoDay" value="0" /> Dom
+                  </label>
+                </div>
+                <span style="font-size: 0.73rem; color: #92400e; margin-top: 4px; display: block;">No dia configurado, o preço muda automaticamente no cardápio e no PDV.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seleção de Sabores / Combos Personalizados -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin-top: 14px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label style="font-weight: 800; font-size: 0.9rem; color: #166534; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="editProdHasCustomization" />
+                <span>🥤 / 🍔 Opções de Sabores ou Seleção de Itens (Combos)</span>
+              </label>
+            </div>
+            <div id="editProdCustomizationFields" style="display: none;">
+              <div class="form-cols-2">
+                <div class="form-field-group">
+                  <label class="form-field-label">Tipo de Escolha *</label>
+                  <select id="editProdCustomType" class="form-text-input">
+                    <option value="flavors">Sabores (Escolha Única - ex: Graviola, Cajá, Maracujá)</option>
+                    <option value="selection">Seleção / Combo (Múltipla Escolha com limite - ex: 3 Hambúrgueres)</option>
+                  </select>
+                </div>
+                <div class="form-field-group" id="editProdCustomMaxQtyGroup" style="display: none;">
+                  <label class="form-field-label">Quantidade Máxima de Escolhas *</label>
+                  <input type="number" id="editProdCustomMaxQty" class="form-text-input" placeholder="Ex: 3" value="1" min="1" />
+                </div>
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label">Título da Escolha (Opcional)</label>
+                <input type="text" id="editProdCustomLabel" class="form-text-input" placeholder="Ex: Escolha o sabor do suco ou Escolha seus 3 hambúrgueres" />
+              </div>
+              <div class="form-field-group" style="margin-bottom: 0;">
+                <label class="form-field-label">Opções Disponíveis (1 opção por linha) *</label>
+                <textarea id="editProdCustomOptions" class="notes-input-box" rows="5" placeholder="Exemplo:&#10;Graviola&#10;Cajá&#10;Maracujá&#10;Acerola&#10;Goiaba"></textarea>
+                <span style="font-size: 0.73rem; color: #166534; margin-top: 4px; display: block;">Digite cada sabor ou lanche em uma linha separada. O sistema criará os seletores automaticamente no PDV, Mesas e Cardápio, e imprimirá com destaque para a cozinha.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Produto</button>
+            <button type="button" id="btnProductEditCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+  </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE EDITAR / CRIAR CATEGORIA
+       ========================================== -->
+  <div id="categoryEditModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 460px;">
+      <div class="modal-header-bar">
+        <h3 id="categoryModalTitle" style="margin: 0;">Nova Categoria</h3>
+        <button id="btnCategoryModalClose" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-scroll-body">
+        <form id="categoryEditForm">
+          <input type="hidden" id="editCatId" />
+          <div class="form-field-group">
+            <label class="form-field-label">Nome da Categoria *</label>
+            <input type="text" id="editCatName" class="form-text-input" placeholder="Ex: Hambúrgueres Artesanais" required />
+          </div>
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Ordem de Exibição</label>
+              <input type="number" id="editCatOrder" class="form-text-input" placeholder="1" value="1" />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Status</label>
+              <select id="editCatActive" class="form-text-input">
+                <option value="true">Ativa (Visível)</option>
+                <option value="false">Inativa (Oculta)</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Categoria</button>
+            <button type="button" id="btnCategoryModalCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE EDITAR / CRIAR ADICIONAL
+       ========================================== -->
+  <div id="optionalEditModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 480px;">
+      <div class="modal-header-bar">
+        <h3 id="optionalModalTitle" style="margin: 0;">Novo Adicional</h3>
+        <button id="btnOptionalModalClose" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-scroll-body">
+        <form id="optionalEditForm">
+          <input type="hidden" id="editOptId" />
+          <div class="form-field-group">
+            <label class="form-field-label">Nome do Adicional *</label>
+            <input type="text" id="editOptName" class="form-text-input" placeholder="Ex: Queijo Coalho Extra" required />
+          </div>
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Preço Adicional (R$) *</label>
+              <input type="number" step="0.50" id="editOptPrice" class="form-text-input" placeholder="Ex: 4.00" required />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Status</label>
+              <select id="editOptActive" class="form-text-input">
+                <option value="true">Ativo</option>
+                <option value="false">Inativo</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-field-group">
+            <label class="form-field-label">Aplicabilidade do Adicional</label>
+            <select id="editOptTarget" class="form-text-input">
+              <option value="all">Todos os Hambúrgueres (Chapa & Brasa)</option>
+              <option value="brasa">Apenas Hambúrgueres na Brasa</option>
+              <option value="chapa">Apenas Hambúrgueres na Chapa</option>
+              <option value="all_categories">Todas as Categorias do Cardápio</option>
+              <option value="custom">Categorias Específicas (Marcar abaixo)...</option>
+            </select>
+          </div>
+          <div id="optCategoriesCheckboxesSection" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 14px;">
+            <label class="form-field-label" style="margin-bottom: 6px;">Exibir este adicional nas categorias:</label>
+            <div id="optCategoriesCheckboxes" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;">
+              <!-- Checkboxes de categorias geradas via JS -->
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Adicional</button>
+            <button type="button" id="btnOptionalModalCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE CONFIGURAÇÃO DE PROMOÇÃO POR DIA DA SEMANA
+       ========================================== -->
+  <div id="dayPromoModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 500px;">
+      <div class="modal-header-bar" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+        <h3 id="dayPromoModalTitle" style="margin: 0; color: #fff;"><i class="fi fi-sr-flame"></i> Promoção por Dia da Semana</h3>
+        <button id="btnDayPromoModalClose" class="btn-close-modal" style="color: #fff; background: rgba(255,255,255,0.2);">✕</button>
+      </div>
+      <div class="modal-scroll-body">
+        <form id="dayPromoForm">
+          <input type="hidden" id="dayPromoProdId" />
+
+          <div class="form-field-group">
+            <label class="form-field-label">Produto *</label>
+            <select id="dayPromoProdSelect" class="form-text-input" required>
+              <!-- Preenchido dinamicamente via JS com produtos -->
+            </select>
+          </div>
+
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Preço Normal (R$) *</label>
+              <input type="number" step="0.50" id="dayPromoRegularPrice" class="form-text-input" placeholder="Ex: 50.00" required />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Preço Promocional (R$) *</label>
+              <input type="number" step="0.50" id="dayPromoPrice" class="form-text-input" placeholder="Ex: 40.00" required />
+            </div>
+          </div>
+
+          <!-- Dias da semana com promoção ativa -->
+          <div class="form-field-group">
+            <label class="form-field-label">Dias da Semana com Promoção Ativa *</label>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;" id="dayPromoWeekdaysContainer">
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="1" /> Seg
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="2" /> Ter
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="3" /> Qua
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="4" /> Qui
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="5" /> Sex
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="6" /> Sáb
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; background: #f1f5f9; padding: 7px 11px; border-radius: 6px; cursor: pointer; font-weight: 700; border: 1px solid #cbd5e1;">
+                <input type="checkbox" name="dayPromoDayCheckbox" value="0" /> Dom
+              </label>
+            </div>
+            <span style="font-size: 0.74rem; color: #64748b; margin-top: 5px; display: block;">No dia marcado, o sistema aplica o preço promocional automaticamente no cardápio e no PDV.</span>
+          </div>
+
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Rótulo / Badge (Opcional)</label>
+              <input type="text" id="dayPromoLabel" class="form-text-input" placeholder="Ex: PROMO DE SEGUNDA" />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Status da Promoção</label>
+              <select id="dayPromoActive" class="form-text-input">
+                <option value="true">Ativa (Aplicar nos dias)</option>
+                <option value="false">Inativa (Desativada)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+              <i class="fi fi-sr-disk"></i> Salvar Promoção
+            </button>
+            <button type="button" id="btnRemoveDayPromo" class="btn-ghost-secondary" style="color: var(--primary-red); display: none;">
+              <i class="fi fi-sr-trash"></i> Remover Promoção
+            </button>
+            <button type="button" id="btnDayPromoModalCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE PEDIDO PELO WHATSAPP
+       ========================================== -->
+  <div id="whatsappOrderModal" class="modal-backdrop" style="display: none; z-index: 1050;">
+    <div class="modal-window" style="max-width: 620px;">
+      <div class="modal-header-bar"
+        style="background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); border-radius: 14px 14px 0 0;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.4rem;"><i class="fi fi-brands-whatsapp"></i></span>
+          <div>
+            <h3 style="margin: 0; color: #fff;">Pedido via WhatsApp</h3>
+            <p style="margin: 0; font-size: 0.78rem; color: rgba(255,255,255,0.8);">Registre o pedido recebido pelo
+              WhatsApp</p>
+          </div>
+        </div>
+        <button id="btnWhatsappModalClose" class="btn-close-modal"
+          style="color: #fff; background: rgba(255,255,255,0.2);">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <!-- Tipo de Pedido -->
+        <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+          <button type="button" class="wa-type-btn active" data-wa-type="delivery" id="waBtnDelivery"
+            style="flex: 1; padding: 10px; border-radius: 10px; border: 2px solid #25d366; background: #dcfce7; color: #166534; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+            <i class="fi fi-sr-motorcycle"></i> Delivery
+          </button>
+          <button type="button" class="wa-type-btn" data-wa-type="pickup" id="waBtnPickup"
+            style="flex: 1; padding: 10px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+            <i class="fi fi-sr-shop"></i> Retirada
+          </button>
+        </div>
+
+        <!-- Dados do Cliente -->
+        <div
+          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <h4 style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 12px;"><i class="fi fi-sr-user"></i> Dados do Cliente
+          </h4>
+          <div class="form-cols-2">
+            <div class="form-field-group" style="margin-bottom: 0;">
+              <label class="form-field-label">Nome *</label>
+              <input type="text" id="waCustomerName" class="form-text-input" placeholder="Ex: João Silva" required />
+            </div>
+            <div class="form-field-group" style="margin-bottom: 0;">
+              <label class="form-field-label">WhatsApp *</label>
+              <input type="tel" id="waCustomerPhone" class="form-text-input" placeholder="(81) 99999-9999" required />
+            </div>
+          </div>
+        </div>
+
+        <!-- Endereço de Entrega (só para delivery) -->
+        <div id="waDeliveryAddressSection"
+          style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <h4 style="font-size: 0.88rem; font-weight: 800; color: #166534; margin-bottom: 12px;"><i class="fi fi-sr-marker"></i> Endereço de Entrega
+          </h4>
+          <div class="form-cols-2">
+            <div class="form-field-group" style="margin-bottom: 8px;">
+              <label class="form-field-label">Rua / Av. *</label>
+              <input type="text" id="waStreet" class="form-text-input" placeholder="Ex: Rua das Flores" />
+            </div>
+            <div class="form-field-group" style="margin-bottom: 8px;">
+              <label class="form-field-label">Número *</label>
+              <input type="text" id="waNumber" class="form-text-input" placeholder="Ex: 123" />
+            </div>
+          </div>
+          <div class="form-cols-2">
+            <div class="form-field-group" style="margin-bottom: 8px;">
+              <label class="form-field-label">Bairro *</label>
+              <select id="waNeighborhoodSelect" class="form-text-input" required>
+                <option value="">Selecione o bairro...</option>
+              </select>
+            </div>
+            <div class="form-field-group" style="margin-bottom: 8px;">
+              <label class="form-field-label">Complemento</label>
+              <input type="text" id="waComplement" class="form-text-input" placeholder="Ex: Apto 202, Casa B" />
+            </div>
+          </div>
+          <div class="form-field-group" style="margin-bottom: 0;">
+            <label class="form-field-label">Ponto de Referência</label>
+            <input type="text" id="waReference" class="form-text-input" placeholder="Ex: Próximo ao mercado X" />
+          </div>
+        </div>
+
+        <!-- Itens do Pedido -->
+        <div
+          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h4 style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin: 0;"><i class="fi fi-sr-hamburger"></i> Itens do Pedido</h4>
+            <button type="button" id="btnWaAddItem"
+              style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+              + Adicionar Item
+            </button>
+          </div>
+          <div id="waItemsList" style="display: flex; flex-direction: column; gap: 8px; min-height: 50px;">
+            <div id="waItemsEmpty" style="text-align: center; padding: 16px; color: #94a3b8; font-size: 0.85rem;">
+              Nenhum item adicionado. Clique em + Adicionar Item.
+            </div>
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+            <span style="font-size: 0.85rem; font-weight: 700;">Subtotal dos Itens:</span>
+            <strong id="waSubtotalDisplay" style="color: #d97706; font-size: 1rem;">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <!-- Taxas, Pagamento, Obs -->
+        <div class="form-cols-2" style="margin-bottom: 12px;">
+          <div class="form-field-group" style="margin-bottom: 0;">
+            <label class="form-field-label">Taxa de Entrega (R$)</label>
+            <input type="number" step="0.50" id="waDeliveryFee" class="form-text-input" value="5.00" />
+          </div>
+          <div class="form-field-group" style="margin-bottom: 0;">
+            <label class="form-field-label">Forma de Pagamento</label>
+            <select id="waPaymentMethod" class="form-text-input">
+              <option value="pix">PIX</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao">Cartão</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="waChangeGroup" class="form-field-group" style="display: none; margin-bottom: 12px;">
+          <label class="form-field-label">Troco para (R$)</label>
+          <input type="number" step="1.00" id="waChangeFor" class="form-text-input" placeholder="Ex: 50.00" />
+        </div>
+
+        <div class="form-field-group" style="margin-bottom: 16px;">
+          <label class="form-field-label">Observações Gerais</label>
+          <input type="text" id="waGeneralNotes" class="form-text-input"
+            placeholder="Ex: Sem picles em tudo, molho extra" />
+        </div>
+
+        <div
+          style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 1rem; font-weight: 800;"><i class="fi fi-sr-dollar"></i> Total do Pedido:</span>
+          <strong id="waTotalDisplay" style="font-size: 1.3rem; color: #d97706;">R$ 0,00</strong>
+        </div>
+
+        <button type="button" id="btnSubmitWhatsappOrder" class="btn-submit-order"
+          style="width: 100%; background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); font-size: 1rem;">
+          <i class="fi fi-brands-whatsapp"></i> Registrar Pedido WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Seleção de Produto para o Pedido WhatsApp -->
+  <div id="waProductPickerModal" class="modal-backdrop" style="display: none; z-index: 1200;">
+    <div class="modal-window" style="max-width: 500px;">
+      <div class="modal-header-bar">
+        <h3 style="margin: 0;">Escolher Item</h3>
+        <button id="btnWaPickerClose" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-scroll-body">
+        <input type="text" id="waPickerSearch" class="form-text-input" placeholder="🔍 Buscar produto..."
+          style="margin-bottom: 12px;" />
+        <div id="waPickerProductsList"
+          style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE DESPACHO / ATRIBUIR ENTREGADOR
+       ========================================== -->
+  <div id="dispatchCourierModal" class="modal-backdrop" style="display: none; z-index: 1150;">
+    <div class="modal-window" style="max-width: 480px;">
+      <div class="modal-header-bar"
+        style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 14px 14px 0 0;">
+        <div>
+          <h3 style="margin: 0; color: #fff;"><i class="fi fi-sr-motorcycle"></i> Despachar Pedido</h3>
+          <p id="dispatchModalSubtitle" style="margin: 0; font-size: 0.8rem; color: rgba(255,255,255,0.85);">Selecione
+            qual entregador vai levar este pedido:</p>
+        </div>
+        <button id="btnDispatchModalClose" class="btn-close-modal"
+          style="color: #fff; background: rgba(255,255,255,0.2);">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <input type="hidden" id="dispatchOrderId" />
+
+        <div id="dispatchCouriersList" class="courier-dispatch-grid">
+          <!-- Renderizado via JS (Paulo, Marcos, Hernandes) -->
+        </div>
+
+        <div style="margin-top: 14px; display: flex; gap: 10px;">
+          <button type="button" id="btnAddOtherCourier" class="btn-ghost-secondary"
+            style="flex: 1; font-size: 0.82rem;">
+            <i class="fi fi-sr-plus"></i> Digitar Outro Entregador
+          </button>
+          <button type="button" id="btnConfirmDispatchNoCourier" class="btn-ghost-secondary"
+            style="flex: 1; font-size: 0.82rem;">
+            Despachar Sem Entregador
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE EDITAR / CRIAR ENTREGADOR
+       ========================================== -->
+  <div id="courierEditModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 440px;">
+      <div class="modal-header-bar">
+        <h3 id="courierModalTitle" style="margin: 0;">Novo Entregador</h3>
+        <button id="btnCourierModalClose" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-scroll-body">
+        <form id="courierEditForm">
+          <input type="hidden" id="editCourierId" />
+          <div class="form-field-group">
+            <label class="form-field-label">Nome do Entregador *</label>
+            <input type="text" id="editCourierName" class="form-text-input" placeholder="Ex: Paulo" required />
+          </div>
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">WhatsApp / Telefone</label>
+              <input type="tel" id="editCourierPhone" class="form-text-input" placeholder="(81) 99999-9999" />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Status</label>
+              <select id="editCourierActive" class="form-text-input">
+                <option value="true">Ativo</option>
+                <option value="false">Inativo</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Entregador</button>
+            <button type="button" id="btnCourierModalCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE EDITAR / CRIAR BAIRRO
+       ========================================== -->
+  <div id="neighborhoodEditModal" class="modal-backdrop" style="display: none; z-index: 1100;">
+    <div class="modal-window" style="max-width: 440px;">
+      <div class="modal-header-bar">
+        <h3 id="neighborhoodModalTitle" style="margin: 0;">Novo Bairro</h3>
+        <button id="btnNeighborhoodModalClose" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <form id="neighborhoodEditForm">
+          <input type="hidden" id="editNeighborhoodId" />
+
+          <div class="form-field-group">
+            <label class="form-field-label">Nome do Bairro / Região *</label>
+            <input type="text" id="editNeighborhoodName" class="form-text-input" placeholder="Ex: Lote 92" required />
+          </div>
+
+          <div class="form-cols-2">
+            <div class="form-field-group">
+              <label class="form-field-label">Taxa de Entrega (R$) *</label>
+              <input type="number" step="0.50" id="editNeighborhoodFee" class="form-text-input" placeholder="Ex: 8.00"
+                required />
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Tempo Médio (min)</label>
+              <input type="number" step="5" id="editNeighborhoodTime" class="form-text-input" placeholder="Ex: 60"
+                value="60" />
+            </div>
+          </div>
+
+          <div class="form-field-group">
+            <label class="form-field-label">Status</label>
+            <select id="editNeighborhoodActive" class="form-text-input">
+              <option value="true">Ativo (Atendido)</option>
+              <option value="false">Inativo (Não atendido)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Bairro</button>
+            <button type="button" id="btnNeighborhoodModalCancel" class="btn-ghost-secondary">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL DE FECHAMENTO MANUAL DE CAIXA
+       ========================================== -->
+  <div id="manualCashCloseModal" class="modal-backdrop" style="display: none; z-index: 1200;">
+    <div class="modal-window" style="max-width: 540px;">
+      <div class="modal-header-bar"
+        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 14px 14px 0 0;">
+        <div>
+          <h3 style="margin: 0; color: #fff;"><i class="fi fi-sr-lock"></i> Fechamento de Caixa do Dia</h3>
+          <p id="manualCashCloseSubtitle" style="margin: 0; font-size: 0.8rem; color: rgba(255,255,255,0.85);">
+            Encerramento manual do expediente da loja</p>
+        </div>
+        <button id="btnManualCashCloseModalClose" class="btn-close-modal"
+          style="color: #fff; background: rgba(255,255,255,0.2);">✕</button>
+      </div>
+
+      <div class="modal-scroll-body">
+        <!-- Card de Resumo das Vendas -->
+        <div
+          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <h4 style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;"><i class="fi fi-sr-chart-histogram"></i> Resumo do Expediente
+          </h4>
+
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85rem;">
+            <div><strong>Data:</strong> <span id="closeModalDate">--/--/----</span></div>
+            <div><strong>Total de Pedidos:</strong> <span id="closeModalOrdersCount">0</span></div>
+            <div><strong><i class="fi fi-sr-money-bill-wave"></i> Dinheiro:</strong> <span id="closeModalCashTotal"
+                style="color: #2563eb; font-weight: 700;">R$ 0,00</span></div>
+            <div><strong><i class="fi fi-sr-qr-code"></i> PIX:</strong> <span id="closeModalPixTotal" style="color: #8b5cf6; font-weight: 700;">R$
+                0,00</span></div>
+            <div><strong><i class="fi fi-sr-credit-card"></i> Cartão:</strong> <span id="closeModalCardTotal" style="color: #f59e0b; font-weight: 700;">R$
+                0,00</span></div>
+            <div><strong><i class="fi fi-sr-motorcycle"></i> Taxas Entregadores:</strong> <span id="closeModalDeliveryFeesTotal"
+                style="color: #d97706; font-weight: 700;">R$ 0,00</span></div>
+          </div>
+
+          <div
+            style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.95rem;">Faturamento Total:</strong>
+            <strong id="closeModalGrandTotal" style="font-size: 1.25rem; color: #10b981;">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <!-- Campos de Conferência do Dinheiro em Caixa -->
+        <div class="form-cols-2" style="margin-bottom: 12px;">
+          <div class="form-field-group" style="margin-bottom: 0;">
+            <label class="form-field-label">Fundo de Troco Inicial (R$)</label>
+            <input type="number" step="0.50" id="closeModalInitialFund" class="form-text-input" value="0.00" />
+          </div>
+          <div class="form-field-group" style="margin-bottom: 0;">
+            <label class="form-field-label">Dinheiro Contado na Gaveta (R$)</label>
+            <input type="number" step="0.50" id="closeModalCountedCash" class="form-text-input"
+              placeholder="Ex: 250.00" />
+          </div>
+        </div>
+
+        <div id="closeModalDiffAlert"
+          style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px; font-size: 0.85rem; margin-bottom: 14px;">
+          <span>Dinheiro Esperado na Gaveta: <strong id="closeModalExpectedCash">R$ 0,00</strong></span>
+          <div id="closeModalDiffText" style="margin-top: 4px; font-weight: 700; color: #1e40af;">Diferença: R$ 0,00
+            (Batendo)</div>
+        </div>
+
+        <div class="form-field-group" style="margin-bottom: 18px;">
+          <label class="form-field-label">Observações do Fechamento (Opcional)</label>
+          <input type="text" id="closeModalNotes" class="form-text-input"
+            placeholder="Ex: Expediente estendido após as 23h por conta de pedidos extras" />
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="btnConfirmManualCashClose" class="btn-submit-order"
+            style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i class="fi fi-sr-check"></i> Confirmar Fechamento e Emitir Cupom
+          </button>
+          <button type="button" id="btnCancelManualCashClose" class="btn-ghost-secondary">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Scripts Vanilla JS & Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js?v=2.4.0"></script>
+  <script src="js/config.js?v=2.4.0"></script>
+  <script src="js/seedData.js?v=2.4.0"></script>
+  <script src="js/db.js?v=2.4.0"></script>
+  <script src="js/auth.js?v=2.4.0"></script>
+  <script src="js/admin.js?v=2.4.0"></script>
+
+  <!-- ===== POPUP CUSTOMIZADO: Escolha de Tamanho (Hambúrguer) ===== -->
+  <div id="popupChoiceModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; box-shadow:0 24px 64px rgba(0,0,0,0.25); width:100%; max-width:360px; margin:16px; overflow:hidden; animation:popupIn 0.22s cubic-bezier(0.34,1.56,0.64,1);">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%); padding:20px 22px 16px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.8rem; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">🍔</span>
+        <div>
+          <div style="font-weight:800; font-size:1rem; color:#fff; line-height:1.2;" id="popupChoiceProductName">Produto</div>
+          <div style="font-size:0.75rem; color:rgba(255,255,255,0.85); margin-top:2px;">Escolha o tamanho do hambúrguer</div>
+        </div>
+      </div>
+      <!-- Body -->
+      <div style="padding:20px 22px;">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button id="popupChoiceTradicional" style="display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; cursor:pointer; transition:all 0.18s; text-align:left;">
+            <span style="font-size:1.5rem;">🥩</span>
+            <div>
+              <div style="font-weight:800; font-size:0.95rem; color:#1e293b;">Tradicional</div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">1 hambúrguer no pão</div>
+            </div>
+          </button>
+          <button id="popupChoiceDuplo" style="display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; cursor:pointer; transition:all 0.18s; text-align:left;">
+            <span style="font-size:1.5rem;">🍔</span>
+            <div>
+              <div style="font-weight:800; font-size:0.95rem; color:#1e293b;">Duplo <span style="color:#d97706; font-size:0.8rem;">(+ R$ 5,00)</span></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">2 hambúrgueres empilhados</div>
+            </div>
+          </button>
+        </div>
+        <button id="popupChoiceCancel" style="margin-top:14px; width:100%; padding:10px; border-radius:10px; border:none; background:#f1f5f9; color:#64748b; font-size:0.85rem; font-weight:600; cursor:pointer; transition:background 0.15s;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== POPUP CUSTOMIZADO: Campo de Texto (Observações) ===== -->
+  <div id="popupInputModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; box-shadow:0 24px 64px rgba(0,0,0,0.25); width:100%; max-width:380px; margin:16px; overflow:hidden; animation:popupIn 0.22s cubic-bezier(0.34,1.56,0.64,1);">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); padding:18px 22px 14px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.6rem;">📝</span>
+        <div>
+          <div style="font-weight:800; font-size:0.95rem; color:#fff; line-height:1.2;" id="popupInputTitle">Observações</div>
+          <div style="font-size:0.74rem; color:rgba(255,255,255,0.85); margin-top:2px;" id="popupInputSubtitle">Alguma observação especial?</div>
+        </div>
+      </div>
+      <!-- Body -->
+      <div style="padding:18px 22px 20px;">
+        <textarea id="popupInputField" rows="3" placeholder="Ex: sem cebola, ponto da carne, molho extra..." style="width:100%; padding:12px 14px; border-radius:12px; border:2px solid #e2e8f0; font-size:0.88rem; font-family:inherit; resize:none; outline:none; transition:border-color 0.15s; box-sizing:border-box; color:#1e293b;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button id="popupInputCancel" style="flex:1; padding:11px; border-radius:11px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-size:0.88rem; font-weight:700; cursor:pointer; transition:all 0.15s;">Cancelar</button>
+          <button id="popupInputConfirm" style="flex:2; padding:11px; border-radius:11px; border:none; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; font-size:0.88rem; font-weight:800; cursor:pointer; transition:all 0.15s; box-shadow:0 4px 12px rgba(59,130,246,0.35);">✓ Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes popupIn {
+      from { opacity: 0; transform: scale(0.88) translateY(16px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    #popupChoiceTradicional:hover { border-color: #f59e0b; background: #fffbeb; }
+    #popupChoiceDuplo:hover       { border-color: #f59e0b; background: #fffbeb; }
+    #popupChoiceCancel:hover      { background: #e2e8f0; }
+    #popupInputField:focus        { border-color: #3b82f6; }
+    #popupInputCancel:hover       { background: #e2e8f0; border-color: #cbd5e1; }
+    #popupInputConfirm:hover      { filter: brightness(1.1); box-shadow: 0 6px 18px rgba(59,130,246,0.45); }
+  <!-- Scripts Vanilla JS & Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js?v=2.7.0"></script>
+  <script src="js/config.js?v=2.7.0"></script>
+  <script src="js/seedData.js?v=2.7.0"></script>
+  <script src="js/db.js?v=2.7.0"></script>
+  <script src="js/auth.js?v=2.7.0"></script>
+  <script src="js/admin.js?v=2.7.0"></script>
+</body>
+</html>

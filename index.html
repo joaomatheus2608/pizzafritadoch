@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO & Metatags -->
+  <title>Pizza Frita do CH — Jaboatão Centro (Delivery)</title>
+  <meta name="title" content="Pizza Frita do CH — Jaboatão Centro (Delivery)" />
+  <meta name="description"
+    content="Não é pizza, muito menos pastel. É uma experiência única! Cardápio digital e pedidos delivery da Pizza Frita do CH em Jaboatão Centro." />
+  <meta name="theme-color" content="#d97706" />
+  <link rel="canonical" href="index.html" />
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Pizza Frita do CH — Delivery" />
+  <meta property="og:description"
+    content="Não é pizza, muito menos pastel. É uma experiência única! Sabor em cada mordida. Peça já pelo delivery!" />
+  <meta property="og:image" content="logo.jpg" />
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Pizza Frita do CH — Jaboatão Centro" />
+  <meta name="twitter:description"
+    content="Pizzas fritas artesanais crocantes por fora e irresistíveis por dentro em Jaboatão Centro." />
+  <meta name="twitter:image" content="logo.jpg" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="logo.jpg" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+
+
+  <!-- Flaticon UIcons CDN -->
+  <link rel="stylesheet"
+    href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-brands/css/uicons-brands.css">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/style.css?v=2.4.0" />
+</head>
+
+<body class="landing-page-body">
+
+  <!-- Container 100vh Fullscreen da Apresentação -->
+  <main class="landing-fullscreen-wrapper">
+    <!-- Capa Panorâmica com Desfoque -->
+    <div class="landing-bg-panoramic"></div>
+
+    <!-- Card Central Flutuante -->
+    <div class="welcome-card-wrapper" style="margin: 0; width: 100%; max-width: 580px;">
+      <div class="welcome-profile-card">
+
+        <!-- Avatar da Logo -->
+        <div class="welcome-logo-avatar-wrap">
+          <img src="logo.jpg" alt="Pizza Frita do CH Logo" class="welcome-logo-avatar" />
+        </div>
+
+        <!-- Nome da Pizzaria -->
+        <h2 class="welcome-store-title">Pizza Frita do CH</h2>
+
+        <!-- Endereço e Pedido Mínimo -->
+        <div class="welcome-meta-info">
+          <div class="welcome-meta-row">
+            <i class="fi fi-sr-motorcycle" style="color: #fbbf24;"></i>
+            <span>Jaboatão Centro - PE • <strong>Apenas Delivery</strong></span>
+          </div>
+          <div class="welcome-meta-row" style="color: var(--text-muted); font-size: 0.82rem; margin-top: 4px;">
+            <span>Pedido mínimo: <strong>R$ 15,00</strong> • Entrega a partir de <strong>R$ 5,00</strong></span>
+          </div>
+        </div>
+
+        <!-- Status da Loja & Botão Ver Horários -->
+        <div class="welcome-status-row">
+          <div id="welcomeStatusIndicator" class="welcome-status-text is-open">
+            <span class="status-indicator-dot"></span>
+            <span>Abre hoje, às 18:00</span>
+          </div>
+          <button id="btnToggleHours" class="btn-toggle-hours" type="button">
+            Ver horários <span id="hoursArrow">▾</span>
+          </button>
+        </div>
+
+        <!-- Conteúdo Expansível de Horários -->
+        <div id="hoursAccordionContent" class="hours-accordion-content">
+          <table class="hours-table">
+            <tbody>
+              <tr>
+                <td>Segunda-feira</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Terça-feira</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Quarta-feira</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Quinta-feira</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Sexta-feira</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Sábado</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+              <tr>
+                <td>Domingo</td>
+                <td style="text-align: right; font-weight: 700;">18:00 às 23:00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Botões de Ação Principais -->
+        <div class="welcome-actions-grid" style="margin-top: 6px;">
+          <a href="cardapio.html" class="btn-welcome-order" style="text-decoration: none;">
+            Fazer pedido
+          </a>
+
+          <div class="welcome-secondary-actions">
+            <a href="https://wa.me/5581991421295" target="_blank" class="btn-welcome-whatsapp">
+              WhatsApp
+            </a>
+            <button id="btnShareRestaurant" class="btn-welcome-share" type="button">
+              Compartilhar
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Linha Discreta de Rodapé Integrada -->
+    <div style="margin-top: 14px; font-size: 0.75rem; color: rgba(255,255,255,0.5); z-index: 10; text-align: center;">
+      &copy; 2026 Pizza Frita do CH • Jaboatão Centro - PE
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="appToastNotification" class="app-toast-alert">
+    <span>Link copiado para a área de transferência!</span>
+  </div>
+
+  <!-- Scripts Vanilla JS & Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js?v=2.7.0"></script>
+  <script src="js/config.js?v=2.7.0"></script>
+  <script src="js/seedData.js?v=2.7.0"></script>
+  <script src="js/db.js?v=2.7.0"></script>
+  <script src="js/landing.js?v=2.7.0"></script>
+</body>
+
+</html>
