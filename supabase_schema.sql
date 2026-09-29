@@ -1,7 +1,7 @@
 -- ========================================================
 -- PIZZA FRITA DO CH - SCHEMA E DADOS INICIAIS DO SUPABASE
--- Execute este script completo no SQL Editor do Supabase Dashboard:
--- https://supabase.com/dashboard/project/ifdqbrmpfhammrxgdrsp/sql
+-- Execute este script completo no SQL Editor do seu Supabase Dashboard:
+-- https://supabase.com/dashboard/project/_/sql
 -- ========================================================
 
 -- 1. HABILITAR EXTENSÕES NECESSÁRIAS

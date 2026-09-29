@@ -1,4 +1,5 @@
 [build]
+  command = "node generate-env.js"
   publish = "."
   functions = "netlify/functions"
 

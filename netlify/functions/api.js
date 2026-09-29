@@ -1,16 +1,16 @@
 // ========================================================
-// BOYDEGUSTA - NETLIFY FUNCTION (API SERVER-SIDE)
+// PIZZA FRITA DO CH - NETLIFY FUNCTION (API SERVER-SIDE)
 // Todas as chamadas ao Supabase passam por aqui.
 // As credenciais NUNCA chegam ao browser.
 // ========================================================
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
 function supabaseHeaders() {
   return {
-    'apikey': SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
   };
