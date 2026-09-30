@@ -2651,13 +2651,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Reconstrói o select de categorias SOMENTE se precisar (evita resetar a seleção)
     if (dom.adminFilterCategory) {
-      const currentCatVal = dom.adminFilterCategory.value;
       const categories = adminState.categories && adminState.categories.length > 0 ? adminState.categories : (window.INITIAL_CATEGORIES || []);
-      const hasCorrectOptions = dom.adminFilterCategory.querySelectorAll('option[value!="all"]').length === categories.length;
-      if (!hasCorrectOptions) {
+      const currentOptionsCount = Array.from(dom.adminFilterCategory.options || []).filter(o => o.value !== 'all').length;
+      if (currentOptionsCount !== categories.length) {
         let catOptions = '<option value="all">Todas as categorias</option>';
         categories.forEach(c => {
-          catOptions += `<option value="${c.id}">${c.name}</option>`;
+          catOptions += `<option value="${c.id}">${window.escapeHtml(c.name)}</option>`;
         });
         dom.adminFilterCategory.innerHTML = catOptions;
       }
