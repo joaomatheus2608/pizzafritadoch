@@ -65,23 +65,32 @@
     }
   }
 
-  // Inicializa o cache com os dados padrão APENAS para chaves que ainda não existem
-  // NUNCA apaga dados existentes por mudança de versão
+  // Inicializa o cache com os dados padrão para chaves que não existem ou estão vazias
   function initDefaults() {
-    // Só preenche uma chave se ela estiver completamente vazia
-    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS))      setStored(STORAGE_KEYS.SETTINGS,      window.INITIAL_SETTINGS);
-    if (!localStorage.getItem(STORAGE_KEYS.HOURS))         setStored(STORAGE_KEYS.HOURS,         window.INITIAL_OPERATING_HOURS);
-    if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES))    setStored(STORAGE_KEYS.CATEGORIES,    window.INITIAL_CATEGORIES);
-    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS))      setStored(STORAGE_KEYS.PRODUCTS,      window.INITIAL_PRODUCTS);
-    if (!localStorage.getItem(STORAGE_KEYS.OPTIONALS))     setStored(STORAGE_KEYS.OPTIONALS,     window.INITIAL_OPTIONALS);
+    const checkArrayOrFill = (key, initial) => {
+      try {
+        const val = localStorage.getItem(key);
+        if (!val || val === '[]' || val === 'null') {
+          setStored(key, initial);
+        }
+      } catch {
+        setStored(key, initial);
+      }
+    };
+
+    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) setStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS);
+    checkArrayOrFill(STORAGE_KEYS.HOURS, window.INITIAL_OPERATING_HOURS);
+    checkArrayOrFill(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES);
+    checkArrayOrFill(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
+    checkArrayOrFill(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS);
+    checkArrayOrFill(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS || []);
+    checkArrayOrFill(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS || []);
     if (!localStorage.getItem(STORAGE_KEYS.PROMOTIONS))    setStored(STORAGE_KEYS.PROMOTIONS,    window.INITIAL_PROMOTIONS || []);
-    if (!localStorage.getItem(STORAGE_KEYS.NEIGHBORHOODS)) setStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS || []);
-    if (!localStorage.getItem(STORAGE_KEYS.COURIERS))      setStored(STORAGE_KEYS.COURIERS,      window.INITIAL_COURIERS || []);
     if (!localStorage.getItem(STORAGE_KEYS.ORDERS))        setStored(STORAGE_KEYS.ORDERS,        []);
     if (!localStorage.getItem(STORAGE_KEYS.USERS))         setStored(STORAGE_KEYS.USERS,         []);
     if (!localStorage.getItem(STORAGE_KEYS.ADDRESSES))     setStored(STORAGE_KEYS.ADDRESSES,     []);
     if (!localStorage.getItem(STORAGE_KEYS.CASH_CLOSINGS)) setStored(STORAGE_KEYS.CASH_CLOSINGS, []);
-    localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v2.7');
+    localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v2.8');
   }
 
   initDefaults();

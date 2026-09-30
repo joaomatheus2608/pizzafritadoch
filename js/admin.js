@@ -559,11 +559,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       adminState.settings = bootstrap.settings || window.INITIAL_SETTINGS;
       adminState.orders = orders || [];
-      adminState.products = bootstrap.products || [];
-      adminState.categories = bootstrap.categories || [];
-      adminState.optionals = bootstrap.optionals || [];
+      adminState.products = (bootstrap.products && bootstrap.products.length > 0) ? bootstrap.products : (window.INITIAL_PRODUCTS || []);
+      adminState.categories = (bootstrap.categories && bootstrap.categories.length > 0) ? bootstrap.categories : (window.INITIAL_CATEGORIES || []);
+      adminState.optionals = (bootstrap.optionals && bootstrap.optionals.length > 0) ? bootstrap.optionals : (window.INITIAL_OPTIONALS || []);
       adminState.promotions = bootstrap.promotions || [];
-      adminState.neighborhoods = bootstrap.neighborhoods || [];
+      adminState.neighborhoods = (bootstrap.neighborhoods && bootstrap.neighborhoods.length > 0) ? bootstrap.neighborhoods : (window.INITIAL_NEIGHBORHOODS || []);
       const defaultCouriers = window.INITIAL_COURIERS || [
         { id: 'courier-1', name: 'Paulo', phone: '', is_active: true },
         { id: 'courier-2', name: 'Marcos', phone: '', is_active: true },
@@ -2632,9 +2632,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // IMPRESSÃO — CUPOM COMPLETO (legado, mantido para compatibilidade)
   // ==========================================
   function renderProducts() {
-    let list = adminState.products;
-    const query = adminState.productSearch.toLowerCase();
-    const catFilter = adminState.productCategoryFilter;
+    if (!adminState.products || adminState.products.length === 0) {
+      adminState.products = (window.INITIAL_PRODUCTS || []).slice();
+    }
+
+    let list = adminState.products || [];
+    const query = (adminState.productSearch || '').toLowerCase().trim();
+    const catFilter = adminState.productCategoryFilter || 'all';
 
     if (query) {
       list = list.filter(p => (p.name || '').toLowerCase().includes(query) || (p.description || '').toLowerCase().includes(query));
@@ -2644,17 +2648,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Reconstrói o select de categorias SOMENTE se precisar (evita resetar a seleção)
-    const currentCatVal = dom.adminFilterCategory.value;
-    const hasCorrectOptions = dom.adminFilterCategory.querySelectorAll('option[value!="all"]').length === adminState.categories.length;
-    if (!hasCorrectOptions) {
-      let catOptions = '<option value="all">Todas as categorias</option>';
-      adminState.categories.forEach(c => {
-        catOptions += `<option value="${c.id}">${c.name}</option>`;
-      });
-      dom.adminFilterCategory.innerHTML = catOptions;
+    if (dom.adminFilterCategory) {
+      const currentCatVal = dom.adminFilterCategory.value;
+      const categories = adminState.categories && adminState.categories.length > 0 ? adminState.categories : (window.INITIAL_CATEGORIES || []);
+      const hasCorrectOptions = dom.adminFilterCategory.querySelectorAll('option[value!="all"]').length === categories.length;
+      if (!hasCorrectOptions) {
+        let catOptions = '<option value="all">Todas as categorias</option>';
+        categories.forEach(c => {
+          catOptions += `<option value="${c.id}">${c.name}</option>`;
+        });
+        dom.adminFilterCategory.innerHTML = catOptions;
+      }
+      dom.adminFilterCategory.value = catFilter;
     }
-    // Restaura o valor selecionado (necessário após innerHTML ou na primeira vez)
-    dom.adminFilterCategory.value = catFilter;
 
     // Garante que o campo de busca reflete o estado atual
     if (dom.adminSearchProductInput && dom.adminSearchProductInput.value !== adminState.productSearch) {
@@ -2665,74 +2671,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     const todayDay = new Date().getDay();
 
     let rowsHtml = '';
-    list.forEach(p => {
-      const cat = adminState.categories.find(c => c.id === p.category_id);
-      const catName = cat ? window.escapeHtml(cat.name) : 'Sem categoria';
-      const formattedPrice = p.price !== null && p.price !== undefined ? window.formatCurrency(p.price) : '<span style="color: var(--text-muted); font-style: italic;">A definir</span>';
-      const isAvail = p.is_available !== false;
-      const isAct = p.is_active !== false;
-
-      // Cálculo e exibição da promoção por dia
-      const promoPrice = Number(p.promo_price) || Number(p.monday_price) || 0;
-      const promoDays = window.normalizePromoDays ? window.normalizePromoDays(p.promo_days, p.monday_price) : (Array.isArray(p.promo_days) ? p.promo_days.map(Number) : (p.monday_price ? [1] : []));
-      const isPromoActive = p.is_promo !== false;
-      const hasDayPromo = isPromoActive && promoPrice > 0 && promoDays.length > 0;
-      const isPromoToday = hasDayPromo && promoDays.includes(todayDay);
-
-      let promoColHtml = '<span style="color: #94a3b8; font-size: 0.78rem;">Sem promoção</span>';
-      if (hasDayPromo) {
-        const daysLabel = promoDays.map(d => DAY_NAMES[d] || d).join(', ');
-        promoColHtml = `
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="display: inline-flex; align-items: center; gap: 4px; background: ${isPromoToday ? '#dcfce7' : '#fef3c7'}; color: ${isPromoToday ? '#166534' : '#92400e'}; font-weight: 700; font-size: 0.75rem; padding: 2px 7px; border-radius: 5px; border: 1px solid ${isPromoToday ? '#86efac' : '#fde68a'};">
-              <i class="fi fi-sr-flame" style="color: ${isPromoToday ? '#16a34a' : '#d97706'};"></i> ${daysLabel}: ${window.formatCurrency(promoPrice)}
-            </span>
-            ${isPromoToday ? '<span style="font-size: 0.7rem; color: #16a34a; font-weight: 700;">🔥 Ativa Hoje!</span>' : ''}
-          </div>
-        `;
-      }
-
-      const thumbUrl = window.optimizeImageUrl ? window.optimizeImageUrl(p.image_url, { width: 120, quality: 70 }) : (p.image_url || 'boylogo.jpg');
-      rowsHtml += `
+    if (!list || list.length === 0) {
+      rowsHtml = `
         <tr>
-          <td>
-            <img class="table-img-thumb" src="${thumbUrl}" alt="${window.escapeHtml(p.name)}" loading="lazy" />
-          </td>
-          <td>
-            <strong>${window.escapeHtml(p.name)}</strong>
-            <div style="font-size: 0.75rem; color: #64748b; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              ${window.escapeHtml(p.description || 'Sem descrição')}
-            </div>
-          </td>
-          <td>${catName}</td>
-          <td><strong>${formattedPrice}</strong></td>
-          <td>${promoColHtml}</td>
-          <td>
-            <span class="product-status-pill ${isAct ? 'status-active' : 'status-inactive'}">
-              ${isAct ? 'Ativo' : 'Oculto'}
-            </span>
-          </td>
-          <td>
-            <button class="btn-ghost-secondary btn-toggle-avail" data-prod-id="${p.id}" style="font-size: 0.78rem; padding: 4px 8px;">
-              ${isAvail ? '<i class="fi fi-sr-check-circle" style="color: #10b981;"></i> Disponível' : '<i class="fi fi-sr-cross-circle" style="color: #ef4444;"></i> Esgotado'}
-            </button>
-          </td>
-          <td>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button class="btn-ghost-secondary btn-day-promo" data-prod-id="${p.id}" style="font-size: 0.78rem; color: #d97706; font-weight: 700; border-color: #fde68a;" title="Configurar Promoção do Dia">
-                <i class="fi fi-sr-flame"></i> Promoção
-              </button>
-              <button class="btn-ghost-secondary btn-edit-product" data-prod-id="${p.id}" style="font-size: 0.78rem;">
-                <i class="fi fi-sr-pencil"></i> Editar
-              </button>
-              <button class="btn-ghost-secondary btn-delete-product" data-prod-id="${p.id}" style="font-size: 0.78rem; color: var(--primary-red);" title="Excluir Produto">
-                <i class="fi fi-sr-trash"></i>
-              </button>
-            </div>
+          <td colspan="8" style="text-align: center; padding: 48px 20px; color: #64748b;">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">🍕</div>
+            <div style="font-weight: 700; font-size: 1rem; color: #1e293b;">Nenhum produto encontrado</div>
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px;">Tente limpar a busca ou adicione um novo produto pelo botão "+ Novo Produto"</div>
           </td>
         </tr>
       `;
-    });
+    } else {
+      list.forEach(p => {
+        const cat = (adminState.categories || []).find(c => c.id === p.category_id);
+        const catName = cat ? window.escapeHtml(cat.name) : 'Sem categoria';
+        const formattedPrice = p.price !== null && p.price !== undefined ? window.formatCurrency(p.price) : '<span style="color: var(--text-muted); font-style: italic;">A definir</span>';
+        const isAvail = p.is_available !== false;
+        const isAct = p.is_active !== false;
+
+        // Cálculo e exibição da promoção por dia
+        const promoPrice = Number(p.promo_price) || Number(p.monday_price) || 0;
+        const promoDays = window.normalizePromoDays ? window.normalizePromoDays(p.promo_days, p.monday_price) : (Array.isArray(p.promo_days) ? p.promo_days.map(Number) : (p.monday_price ? [1] : []));
+        const isPromoActive = p.is_promo !== false;
+        const hasDayPromo = isPromoActive && promoPrice > 0 && promoDays.length > 0;
+        const isPromoToday = hasDayPromo && promoDays.includes(todayDay);
+
+        let promoColHtml = '<span style="color: #94a3b8; font-size: 0.78rem;">Sem promoção</span>';
+        if (hasDayPromo) {
+          const daysLabel = promoDays.map(d => DAY_NAMES[d] || d).join(', ');
+          promoColHtml = `
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="display: inline-flex; align-items: center; gap: 4px; background: ${isPromoToday ? '#dcfce7' : '#fef3c7'}; color: ${isPromoToday ? '#166534' : '#92400e'}; font-weight: 700; font-size: 0.75rem; padding: 2px 7px; border-radius: 5px; border: 1px solid ${isPromoToday ? '#86efac' : '#fde68a'};">
+                <i class="fi fi-sr-flame" style="color: ${isPromoToday ? '#16a34a' : '#d97706'};"></i> ${daysLabel}: ${window.formatCurrency(promoPrice)}
+              </span>
+              ${isPromoToday ? '<span style="font-size: 0.7rem; color: #16a34a; font-weight: 700;">🔥 Ativa Hoje!</span>' : ''}
+            </div>
+          `;
+        }
+
+        const thumbUrl = window.optimizeImageUrl ? window.optimizeImageUrl(p.image_url, { width: 120, quality: 70 }) : (p.image_url || 'logo.jpg');
+        rowsHtml += `
+          <tr>
+            <td>
+              <img class="table-img-thumb" src="${thumbUrl}" alt="${window.escapeHtml(p.name)}" onerror="this.src='logo.jpg'" loading="lazy" />
+            </td>
+            <td>
+              <strong>${window.escapeHtml(p.name)}</strong>
+              <div style="font-size: 0.75rem; color: #64748b; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${window.escapeHtml(p.description || 'Sem descrição')}
+              </div>
+            </td>
+            <td>${catName}</td>
+            <td><strong>${formattedPrice}</strong></td>
+            <td>${promoColHtml}</td>
+            <td>
+              <span class="product-status-pill ${isAct ? 'status-active' : 'status-inactive'}">
+                ${isAct ? 'Ativo' : 'Oculto'}
+              </span>
+            </td>
+            <td>
+              <button class="btn-ghost-secondary btn-toggle-avail" data-prod-id="${p.id}" style="font-size: 0.78rem; padding: 4px 8px;">
+                ${isAvail ? '<i class="fi fi-sr-check-circle" style="color: #10b981;"></i> Disponível' : '<i class="fi fi-sr-cross-circle" style="color: #ef4444;"></i> Esgotado'}
+              </button>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="btn-ghost-secondary btn-day-promo" data-prod-id="${p.id}" style="font-size: 0.78rem; color: #d97706; font-weight: 700; border-color: #fde68a;" title="Configurar Promoção do Dia">
+                  <i class="fi fi-sr-flame"></i> Promoção
+                </button>
+                <button class="btn-ghost-secondary btn-edit-product" data-prod-id="${p.id}" style="font-size: 0.78rem;">
+                  <i class="fi fi-sr-pencil"></i> Editar
+                </button>
+                <button class="btn-ghost-secondary btn-delete-product" data-prod-id="${p.id}" style="font-size: 0.78rem; color: var(--primary-red);" title="Excluir Produto">
+                  <i class="fi fi-sr-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    }
 
     dom.adminProductsTableBody.innerHTML = rowsHtml;
 
