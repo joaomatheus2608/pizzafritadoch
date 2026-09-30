@@ -571,6 +571,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       ];
       adminState.couriers = (bootstrap.couriers && bootstrap.couriers.length > 0) ? bootstrap.couriers : defaultCouriers;
 
+      console.log(`[PizzaFrita Admin] Dados carregados com sucesso: ${adminState.products.length} produtos, ${adminState.categories.length} categorias, ${adminState.orders.length} pedidos.`);
+
       try { updateStatusIndicator(); } catch(e) { console.warn(e); }
       try { renderSalonTables(); } catch(e) { console.warn(e); }
       try { renderDashboard(); } catch(e) { console.warn(e); }
