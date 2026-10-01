@@ -258,7 +258,7 @@ VALUES (
     5.00,
     15.00,
     'auto',
-    'Estamos fechados no momento. Nosso horário de funcionamento é das 18:00 às 23:00 (Apenas Delivery).',
+    'Estamos fechados no momento. Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).',
     'admin123',
     '5581991421295',
     'Telefone',
@@ -269,18 +269,19 @@ ON CONFLICT (id) DO UPDATE SET
     slogan = EXCLUDED.slogan,
     whatsapp = EXCLUDED.whatsapp,
     instagram = EXCLUDED.instagram,
-    pix_key = EXCLUDED.pix_key;
+    pix_key = EXCLUDED.pix_key,
+    closed_message = EXCLUDED.closed_message;
 
--- Horários de Funcionamento (18:00 às 23:00 todos os dias)
+-- Horários de Funcionamento (Quarta a Domingo, 17:00 às 22:00 | Segunda e Terça fechado)
 INSERT INTO public.operating_hours (day_of_week, day_name, open_time, close_time, is_open)
 VALUES 
-    (0, 'Domingo', '18:00', '23:00', true),
-    (1, 'Segunda-feira', '18:00', '23:00', true),
-    (2, 'Terça-feira', '18:00', '23:00', true),
-    (3, 'Quarta-feira', '18:00', '23:00', true),
-    (4, 'Quinta-feira', '18:00', '23:00', true),
-    (5, 'Sexta-feira', '18:00', '23:00', true),
-    (6, 'Sábado', '18:00', '23:00', true)
+    (0, 'Domingo', '17:00', '22:00', true),
+    (1, 'Segunda-feira', '17:00', '22:00', false),
+    (2, 'Terça-feira', '17:00', '22:00', false),
+    (3, 'Quarta-feira', '17:00', '22:00', true),
+    (4, 'Quinta-feira', '17:00', '22:00', true),
+    (5, 'Sexta-feira', '17:00', '22:00', true),
+    (6, 'Sábado', '17:00', '22:00', true)
 ON CONFLICT (day_of_week) DO UPDATE SET
     open_time = EXCLUDED.open_time,
     close_time = EXCLUDED.close_time,

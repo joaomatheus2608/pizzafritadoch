@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ==========================================
-  // STATUS DA LOJA (18:00 - 23:00 & MODO MANUAL)
+  // STATUS DA LOJA (17:00 - 22:00 & MODO MANUAL)
   // ==========================================
   function checkStoreStatus() {
     if (!state.settings) return;
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (state.settings.store_status_mode === 'force_closed') {
       state.isStoreOpen = false;
     } else {
-      // Modo Automático (Segunda a Domingo, 18:00 às 23:00)
+      // Modo Automático (Quarta a Domingo, 17:00 às 22:00)
       const now = new Date();
       const currentDay = now.getDay();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -176,8 +176,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!dayConfig || !dayConfig.is_open) {
         state.isStoreOpen = false;
       } else {
-        const [openH, openM] = (dayConfig.open_time || '18:00').split(':').map(Number);
-        const [closeH, closeM] = (dayConfig.close_time || '23:00').split(':').map(Number);
+        const [openH, openM] = (dayConfig.open_time || '17:00').split(':').map(Number);
+        const [closeH, closeM] = (dayConfig.close_time || '22:00').split(':').map(Number);
         const openMin = openH * 60 + (openM || 0);
         const closeMin = closeH * 60 + (closeM || 0);
         state.isStoreOpen = currentMinutes >= openMin && currentMinutes <= closeMin;
@@ -194,9 +194,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (dom.welcomeStatusIndicator) {
       dom.welcomeStatusIndicator.className = `welcome-status-text ${state.isStoreOpen ? 'is-open' : 'is-closed'}`;
+      const now = new Date();
+      const currentDay = now.getDay();
+      const dayConfig = (state.operatingHours || []).find(h => h.day_of_week === currentDay);
+      const isDayClosed = dayConfig ? !dayConfig.is_open : (currentDay === 1 || currentDay === 2);
+      let statusText = '';
+      if (state.isStoreOpen) {
+        statusText = '<i class="fi fi-sr-circle" style="color: #22c55e; font-size: 0.75em;"></i> Aberto agora • Fecha às 22:00';
+      } else if (isDayClosed) {
+        statusText = '<i class="fi fi-sr-circle" style="color: #ef4444; font-size: 0.75em;"></i> Fechado hoje (Seg/Ter) • Abre Quarta às 17:00';
+      } else {
+        statusText = '<i class="fi fi-sr-circle" style="color: #ef4444; font-size: 0.75em;"></i> Fechado • Abre hoje, às 17:00';
+      }
       dom.welcomeStatusIndicator.innerHTML = `
         <span class="status-indicator-dot"></span>
-        <span>${state.isStoreOpen ? '<i class="fi fi-sr-circle" style="color: #22c55e; font-size: 0.75em;"></i> Aberto agora • Fecha às 23:00' : '<i class="fi fi-sr-circle" style="color: #ef4444; font-size: 0.75em;"></i> Abre hoje, às 18:00'}</span>
+        <span>${statusText}</span>
       `;
     }
 
@@ -208,7 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="store-alert-icon"><i class="fi fi-sr-clock"></i></div>
           <div class="store-alert-text">
             <strong>Estamos fechados no momento.</strong>
-            ${escape(state.settings?.closed_message || 'Nosso horário de funcionamento é das 18:00 às 23:00.')}
+            ${escape(state.settings?.closed_message || 'Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).')}
           </div>
         `;
       } else {
@@ -1056,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   async function openCheckout() {
     if (!state.isStoreOpen) {
-      alert('Estamos fechados no momento. Nosso horário de funcionamento é das 18:00 às 23:00.');
+      alert('Estamos fechados no momento. Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).');
       return;
     }
 

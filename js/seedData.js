@@ -12,7 +12,7 @@ const INITIAL_SETTINGS = {
   delivery_fee: 5.00,
   min_order_value: 15.00,
   store_status_mode: 'auto', // 'auto', 'force_open', 'force_closed'
-  closed_message: 'Estamos fechados no momento. Nosso horário de funcionamento é das 18:00 às 23:00 (Apenas Delivery).',
+  closed_message: 'Estamos fechados no momento. Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).',
   admin_password_hash: 'admin123', // Senha padrão de acesso admin local
   pix_key: '5581991421295',
   pix_type: 'Telefone',
@@ -20,13 +20,13 @@ const INITIAL_SETTINGS = {
 };
 
 const INITIAL_OPERATING_HOURS = [
-  { day_of_week: 0, day_name: 'Domingo', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 1, day_name: 'Segunda-feira', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 2, day_name: 'Terça-feira', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 3, day_name: 'Quarta-feira', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 4, day_name: 'Quinta-feira', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 5, day_name: 'Sexta-feira', open_time: '18:00', close_time: '23:00', is_open: true },
-  { day_of_week: 6, day_name: 'Sábado', open_time: '18:00', close_time: '23:00', is_open: true }
+  { day_of_week: 0, day_name: 'Domingo', open_time: '17:00', close_time: '22:00', is_open: true },
+  { day_of_week: 1, day_name: 'Segunda-feira', open_time: '17:00', close_time: '22:00', is_open: false },
+  { day_of_week: 2, day_name: 'Terça-feira', open_time: '17:00', close_time: '22:00', is_open: false },
+  { day_of_week: 3, day_name: 'Quarta-feira', open_time: '17:00', close_time: '22:00', is_open: true },
+  { day_of_week: 4, day_name: 'Quinta-feira', open_time: '17:00', close_time: '22:00', is_open: true },
+  { day_of_week: 5, day_name: 'Sexta-feira', open_time: '17:00', close_time: '22:00', is_open: true },
+  { day_of_week: 6, day_name: 'Sábado', open_time: '17:00', close_time: '22:00', is_open: true }
 ];
 
 const INITIAL_CATEGORIES = [

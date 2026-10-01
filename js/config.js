@@ -10,7 +10,7 @@ const APP_CONFIG = {
   DEFAULT_DELIVERY_FEE: 5.00,
   MIN_ORDER_VALUE: 15.00,
   PICKUP_ADDRESS: 'Jaboatão Centro - PE (Apenas Delivery)',
-  OPERATING_HOURS_DESC: 'Todos os dias — 18:00 às 23:00'
+  OPERATING_HOURS_DESC: 'Quarta a Domingo — 17:00 às 22:00 (Segunda e Terça fechado)'
 };
 
 // Exporta globalmente para o navegador

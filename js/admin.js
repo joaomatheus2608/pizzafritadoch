@@ -648,18 +648,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentMode = adminState.settings?.store_status_mode || 'auto';
     
     if (currentMode !== 'force_open') {
-      const confirmOpen = confirm('🟢 Deseja ABRIR o sistema agora para começar a receber pedidos imediatamente (mesmo antes das 18h)?');
+      const confirmOpen = confirm('🟢 Deseja ABRIR o sistema agora para começar a receber pedidos imediatamente (mesmo antes das 17h)?');
       if (confirmOpen) {
         await openStoreImmediately();
       }
     } else {
-      const opt = prompt('O sistema está ABERTO AGORA (Forçado Aberto).\n\nDigite uma opção:\n1 - Voltar para Horário Automático (18:00 às 23:00)\n2 - Fechar Sistema Agora\n0 - Cancelar / Manter Aberto', '1');
+      const opt = prompt('O sistema está ABERTO AGORA (Forçado Aberto).\n\nDigite uma opção:\n1 - Voltar para Horário Automático (Qua a Dom, 17:00 às 22:00)\n2 - Fechar Sistema Agora\n0 - Cancelar / Manter Aberto', '1');
       if (opt === '1') {
         const updated = await window.db.updateSettings({ store_status_mode: 'auto' });
         adminState.settings = updated;
         updateStatusIndicator();
         populateSettingsForm();
-        alert('⏱️ Sistema configurado para Horário Automático (18:00 às 23:00).');
+        alert('⏱️ Sistema configurado para Horário Automático (Qua a Dom, 17:00 às 22:00).');
       } else if (opt === '2') {
         const updated = await window.db.updateSettings({ store_status_mode: 'force_closed' });
         adminState.settings = updated;
