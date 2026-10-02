@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     min_order_value NUMERIC(10,2) DEFAULT 15.00,
     store_status_mode TEXT DEFAULT 'auto',
     closed_message TEXT DEFAULT 'Estamos fechados no momento. Nosso horário de funcionamento é das 18:00 às 23:00 (Apenas Delivery).',
-    admin_password_hash TEXT DEFAULT 'admin123',
+    admin_password_hash TEXT DEFAULT 'chomelhor',
     pix_key TEXT DEFAULT '5581991421295',
     pix_type TEXT DEFAULT 'Telefone',
     pix_beneficiary TEXT DEFAULT 'Pizza Frita do CH',
@@ -259,7 +259,7 @@ VALUES (
     15.00,
     'auto',
     'Estamos fechados no momento. Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).',
-    'admin123',
+    'chomelhor',
     '5581991421295',
     'Telefone',
     'Pizza Frita do CH'

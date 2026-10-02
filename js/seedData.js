@@ -13,7 +13,7 @@ const INITIAL_SETTINGS = {
   min_order_value: 15.00,
   store_status_mode: 'auto', // 'auto', 'force_open', 'force_closed'
   closed_message: 'Estamos fechados no momento. Nosso horário de funcionamento é de Quarta a Domingo, das 17:00 às 22:00 (Segunda e Terça fechado).',
-  admin_password_hash: 'admin123', // Senha padrão de acesso admin local
+  admin_password_hash: 'chomelhor', // Senha padrão de acesso admin local
   pix_key: '5581991421295',
   pix_type: 'Telefone',
   pix_beneficiary: 'Pizza Frita do CH'

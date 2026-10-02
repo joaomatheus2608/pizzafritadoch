@@ -282,9 +282,9 @@
 
     async verifyAdminPassword(password) {
       const settings = await this.getSettings();
-      const expected = settings?.admin_password_hash || 'admin123';
+      const expected = settings?.admin_password_hash || 'chomelhor';
       const cleanPass = String(password).trim();
-      return cleanPass === String(expected).trim() || cleanPass === 'admin123' || cleanPass === 'pizzafrita';
+      return cleanPass === String(expected).trim() || cleanPass === 'chomelhor';
     },
 
     // ----------------------------------------
