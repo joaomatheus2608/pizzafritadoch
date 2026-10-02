@@ -465,8 +465,17 @@ exports.handler = async function(event) {
     // -------------------------------------------------------
     if (method === 'GET' && path === 'get-orders') {
       const limit = Number(event.queryStringParameters?.limit) || 150;
-      const data = await supabaseFetch(`/orders?select=*,order_items(*)&order=created_at.desc&limit=${limit}`);
-      return respond(200, { data });
+      let data = [];
+      try {
+        data = await supabaseFetch(`/orders?order=created_at.desc&limit=${limit}`);
+      } catch (err) {
+        try {
+          data = await supabaseFetch(`/orders?select=*&order=created_at.desc&limit=${limit}`);
+        } catch (e2) {
+          console.warn('Erro ao buscar pedidos no Supabase REST:', e2.message);
+        }
+      }
+      return respond(200, { data: Array.isArray(data) ? data : [] });
     }
 
     // -------------------------------------------------------
@@ -507,6 +516,8 @@ exports.handler = async function(event) {
         else if (ot === 'balcao' || ot === 'balcão') orderType = 'balcao';
       }
 
+      const addr = orderData.delivery_address || {};
+
       // Constrói payload limpo e seguro para a tabela orders
       const cleanOrderPayload = {
         order_number: nextOrderNumber,
@@ -515,6 +526,12 @@ exports.handler = async function(event) {
         order_type: orderType,
         status: orderData.status || 'novo',
         delivery_address: orderData.delivery_address || null,
+        address_street: addr.street || orderData.address_street || null,
+        address_number: addr.number || orderData.address_number || null,
+        address_neighborhood: addr.neighborhood || orderData.address_neighborhood || null,
+        address_complement: addr.complement || orderData.address_complement || null,
+        address_reference: addr.reference || orderData.address_reference || null,
+        items: Array.isArray(items) ? items : (Array.isArray(orderData.items) ? orderData.items : []),
         payment_method: paymentMethod,
         change_for: (orderData.change_for !== null && orderData.change_for !== undefined && orderData.change_for !== '') ? Number(orderData.change_for) : null,
         subtotal: Number(orderData.subtotal) || 0,

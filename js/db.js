@@ -692,6 +692,7 @@
     // 9. PEDIDOS (ORDERS)
     // ----------------------------------------
     async getOrders() {
+      // 1. Tenta Supabase Client direto
       if (supabase) {
         try {
           const { data, error } = await supabase
@@ -700,12 +701,28 @@
             .order('created_at', { ascending: false })
             .limit(200);
 
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
             setStored(STORAGE_KEYS.ORDERS, data);
             return data;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Falha ao consultar orders no Supabase client:', e);
+        }
       }
+
+      // 2. Tenta Netlify Serverless API
+      try {
+        const res = await fetch('/.netlify/functions/api?action=get-orders');
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+            setStored(STORAGE_KEYS.ORDERS, json.data);
+            return json.data;
+          }
+        }
+      } catch (e) {}
+
+      // 3. Fallback Cache Local
       const list = getStored(STORAGE_KEYS.ORDERS, []);
       return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     },
@@ -714,11 +731,25 @@
       const list = getStored(STORAGE_KEYS.ORDERS, []);
       const nextNum = list.length > 0 ? (Math.max(...list.map(o => Number(o.order_number) || 0)) + 1) : 1001;
 
+      const addr = orderPayload.delivery_address || {};
+      const street = addr.street || orderPayload.address_street || '';
+      const number = addr.number || orderPayload.address_number || '';
+      const neighborhood = addr.neighborhood || orderPayload.address_neighborhood || '';
+      const complement = addr.complement || orderPayload.address_complement || '';
+      const reference = addr.reference || orderPayload.address_reference || '';
+
       const newOrder = {
         ...orderPayload,
         id: orderPayload.id || generateId('ord'),
-        order_number: nextNum,
-        created_at: new Date().toISOString(),
+        order_number: Number(orderPayload.order_number) || nextNum,
+        address_street: street,
+        address_number: number,
+        address_neighborhood: neighborhood,
+        address_complement: complement,
+        address_reference: reference,
+        delivery_address: orderPayload.delivery_address || (street ? { street, number, neighborhood, complement, reference } : null),
+        items: Array.isArray(orderPayload.items) ? orderPayload.items : [],
+        created_at: orderPayload.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: orderPayload.status || 'novo'
       };
@@ -726,17 +757,52 @@
       list.unshift(newOrder);
       setStored(STORAGE_KEYS.ORDERS, list);
 
+      let savedCloudOrder = null;
+
+      // 1. Tenta salvar via Supabase Client
       if (supabase) {
         try {
           const { data, error } = await supabase.from('orders').insert([newOrder]).select().single();
           if (!error && data) {
-            return data;
+            savedCloudOrder = data;
+          } else if (error) {
+            console.warn('Erro ao inserir pedido no Supabase client:', error.message || error);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Exceção ao inserir pedido no Supabase client:', e);
+        }
+      }
+
+      // 2. Se não salvou via Supabase client, tenta via Netlify Functions API
+      if (!savedCloudOrder) {
+        try {
+          const res = await fetch('/.netlify/functions/api?action=create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newOrder)
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.data) {
+              savedCloudOrder = json.data;
+            }
+          }
+        } catch (e) {
+          console.warn('Exceção ao salvar pedido via API Netlify:', e);
+        }
+      }
+
+      if (savedCloudOrder) {
+        newOrder.id = savedCloudOrder.id || newOrder.id;
+        newOrder.order_number = savedCloudOrder.order_number || newOrder.order_number;
+        const idx = list.findIndex(o => o.id === newOrder.id || o.id === orderPayload.id);
+        if (idx >= 0) list[idx] = newOrder;
+        setStored(STORAGE_KEYS.ORDERS, list);
       }
 
       try {
         localStorage.setItem('pizzafrita_orders_ping', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('pizzafrita_order_change', { detail: newOrder }));
       } catch {}
 
       return newOrder;
@@ -753,14 +819,29 @@
         setStored(STORAGE_KEYS.ORDERS, list);
       }
 
+      const updates = { status, updated_at: new Date().toISOString() };
+      if (notes !== null) updates.notes = notes;
+      if (courierName !== null) updates.courier_name = courierName;
+
       if (supabase) {
         try {
-          const updates = { status, updated_at: new Date().toISOString() };
-          if (notes !== null) updates.notes = notes;
-          if (courierName !== null) updates.courier_name = courierName;
           await supabase.from('orders').update(updates).eq('id', orderId);
         } catch (e) {}
       }
+
+      try {
+        await fetch('/.netlify/functions/api?action=update-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, ...updates })
+        });
+      } catch (e) {}
+
+      try {
+        localStorage.setItem('pizzafrita_orders_ping', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('pizzafrita_order_change', { detail: { id: orderId, status } }));
+      } catch {}
+
       return order;
     },
 

@@ -5133,12 +5133,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Auto-refresh inteligente a cada 1 minuto (60 segundos)
+  // Auto-refresh inteligente a cada 10 segundos para pedidos em tempo real
   setInterval(async () => {
     // Se a aba estiver em segundo plano ou minimizada, não faz a requisição para economizar cota do Netlify
     if (document.hidden) return;
     await syncOrdersQuietly();
-  }, 60000);
+  }, 10000);
 
   // Sincroniza imediatamente ao retornar para a aba do painel
   document.addEventListener('visibilitychange', async () => {

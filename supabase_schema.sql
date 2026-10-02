@@ -127,6 +127,9 @@ CREATE TABLE IF NOT EXISTS public.orders (
     status TEXT DEFAULT 'novo',
     courier_name TEXT,
     items JSONB DEFAULT '[]'::jsonb,
+    delivery_address JSONB DEFAULT '{}'::jsonb,
+    user_id TEXT,
+    table_number INTEGER,
     whatsapp_sent BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
