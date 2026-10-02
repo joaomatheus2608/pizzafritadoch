@@ -2854,7 +2854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (dom.editProdPriceM) dom.editProdPriceM.value = prod.price_m || (prod.sizes?.find(s => s.size_key === 'M')?.price) || '';
       if (dom.editProdPriceG) dom.editProdPriceG.value = prod.price_g || (prod.sizes?.find(s => s.size_key === 'G')?.price) || '';
       
-      const hasSizes = Boolean(prod.has_sizes || prod.price_m || prod.price_p || (prod.sizes && prod.sizes.length > 0));
+      const hasSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
       if (dom.editProdHasSizes) dom.editProdHasSizes.checked = hasSizes;
       if (dom.editProdSizesFields) dom.editProdSizesFields.style.display = hasSizes ? 'grid' : 'none';
 
@@ -3056,7 +3056,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const rawPriceP = dom.editProdPriceP ? dom.editProdPriceP.value.trim() : '';
       const rawPriceM = dom.editProdPriceM ? dom.editProdPriceM.value.trim() : '';
       const rawPriceG = dom.editProdPriceG ? dom.editProdPriceG.value.trim() : '';
-      const hasSizes = dom.editProdHasSizes ? dom.editProdHasSizes.checked : Boolean(rawPriceP || rawPriceM || rawPriceG);
+      const hasSizes = dom.editProdHasSizes ? dom.editProdHasSizes.checked : false;
 
       const hasDayPromo = dom.editProdHasDayPromo ? dom.editProdHasDayPromo.checked : false;
       const rawPromoPrice = dom.editProdPromoPrice ? dom.editProdPromoPrice.value.trim() : '';
@@ -3081,11 +3081,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         category_id: dom.editProdCategory.value,
         burger_type: burgerType,
         description: dom.editProdDescription.value.trim(),
-        price: rawPrice ? Number(rawPrice) : (rawPriceP ? Number(rawPriceP) : null),
+        price: rawPrice ? Number(rawPrice) : (hasSizes && rawPriceP ? Number(rawPriceP) : null),
         has_sizes: hasSizes,
-        price_p: rawPriceP ? Number(rawPriceP) : null,
-        price_m: rawPriceM ? Number(rawPriceM) : null,
-        price_g: rawPriceG ? Number(rawPriceG) : null,
+        price_p: hasSizes && rawPriceP ? Number(rawPriceP) : null,
+        price_m: hasSizes && rawPriceM ? Number(rawPriceM) : null,
+        price_g: hasSizes && rawPriceG ? Number(rawPriceG) : null,
         sizes: sizes,
         is_available: dom.editProdAvailable.value === 'true',
         sales_channel: 'todos',

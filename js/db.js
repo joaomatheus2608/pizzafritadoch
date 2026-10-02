@@ -369,6 +369,13 @@
               if (p.sizes && typeof p.sizes === 'string') {
                 try { p.sizes = JSON.parse(p.sizes); } catch {}
               }
+              p.has_sizes = Boolean(p.has_sizes === true || p.has_sizes === 'true');
+              if (!p.has_sizes) {
+                p.price_p = null;
+                p.price_m = null;
+                p.price_g = null;
+                p.sizes = [];
+              }
               return p;
             });
             setStored(STORAGE_KEYS.PRODUCTS, normalized);
@@ -383,20 +390,19 @@
     async saveProduct(prod) {
       const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
 
-      // Se a imagem for base64 muito grande, trunca para evitar erros no Supabase
-      // (O Supabase text suporta até ~1MB, base64 de 400x400 JPEG fica ~30-50KB)
       const imageUrl = prod.image_url || 'logo.jpg';
+      const hasSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
 
       const saved = {
         ...prod,
         id: prod.id || generateId('prod'),
         name: (prod.name || '').trim(),
-        price: Number(prod.price) || 0,
-        price_p: prod.price_p !== undefined ? Number(prod.price_p) : Number(prod.price) || 0,
-        price_m: prod.price_m !== undefined ? Number(prod.price_m) : 0,
-        price_g: prod.price_g !== undefined ? Number(prod.price_g) : 0,
-        has_sizes: prod.has_sizes !== undefined ? Boolean(prod.has_sizes) : (Number(prod.price_m) > 0),
-        sizes: prod.sizes || [],
+        price: (prod.price !== null && prod.price !== undefined && prod.price !== '') ? Number(prod.price) : (hasSizes && prod.price_p ? Number(prod.price_p) : 0),
+        price_p: hasSizes && prod.price_p !== undefined && prod.price_p !== null ? Number(prod.price_p) : null,
+        price_m: hasSizes && prod.price_m !== undefined && prod.price_m !== null ? Number(prod.price_m) : null,
+        price_g: hasSizes && prod.price_g !== undefined && prod.price_g !== null ? Number(prod.price_g) : null,
+        has_sizes: hasSizes,
+        sizes: hasSizes ? (prod.sizes || []) : [],
         is_active: prod.is_active !== false,
         is_available: prod.is_available !== false,
         order_index: Number(prod.order_index) || (list.length + 1),
@@ -411,20 +417,26 @@
 
       if (supabase) {
         try {
-          // Para Supabase, se a imagem for base64 muito grande, envia placeholder
           const supabaseProd = { ...saved };
-          if (supabaseProd.image_url && supabaseProd.image_url.startsWith('data:')) {
-            // Base64 - verifica se é grande demais (>200KB em caracteres)
-            if (supabaseProd.image_url.length > 200000) {
-              supabaseProd.image_url = 'logo.jpg'; // fallback no Supabase
+          const { error } = await supabase.from('products').upsert(supabaseProd);
+          if (error) {
+            console.warn('Upsert direto via Supabase Client falhou (RLS ou erro de schema). Tentando API server-side:', error.message);
+            const apiRes = await fetch('/.netlify/functions/api?action=save-product', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(supabaseProd)
+            });
+            if (apiRes.ok) {
+              const apiJson = await apiRes.json();
+              if (apiJson && apiJson.data) {
+                return { ...saved, ...apiJson.data };
+              }
             }
           }
-          await supabase.from('products').upsert(supabaseProd);
         } catch (e) {
           console.warn('Erro ao salvar produto no Supabase:', e);
         }
       }
-      // Sempre retorna o objeto local com a imagem correta
       return saved;
     },
 

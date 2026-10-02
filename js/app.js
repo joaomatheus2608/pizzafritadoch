@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           let priceDisplayHtml = '';
           let promoBadgeHtml = '';
 
-          const hasPizzaSizes = Boolean(prod.has_sizes || (prod.sizes && prod.sizes.length > 0) || prod.price_m || prod.price_p);
+          const hasPizzaSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
           const priceP = prod.price_p || prod.price || 0;
           const priceM = prod.price_m || 0;
           const priceG = prod.price_g || 0;
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderPizzaSizes(product) {
     if (!dom.productModalSizesList || !dom.productModalSizesSection) return;
 
-    const hasSizes = Boolean(product.has_sizes || (product.sizes && product.sizes.length > 0) || product.price_m || product.price_p);
+    const hasSizes = Boolean(product.has_sizes === true || product.has_sizes === 'true');
     
     if (!hasSizes) {
       dom.productModalSizesSection.style.display = 'none';

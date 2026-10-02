@@ -53,8 +53,8 @@ async function uploadToStorage(base64Data, fileName, mimeType) {
   const res = await fetch(url, {
     method: 'POST',
     headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': mimeType || 'image/jpeg',
       'cache-control': '31536000',
       'x-upsert': 'true'
