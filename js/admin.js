@@ -2793,6 +2793,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  if (dom.adminSearchProductInput) {
+    dom.adminSearchProductInput.addEventListener('input', (e) => {
+      adminState.productSearch = e.target.value;
+      renderProducts();
+    });
+  }
+
+  if (dom.adminFilterCategory) {
+    dom.adminFilterCategory.addEventListener('change', (e) => {
+      adminState.productCategoryFilter = e.target.value;
+      renderProducts();
+    });
+  }
+
   function compressImageFile(file, maxWidth = 400, maxHeight = 400, quality = 0.75) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
