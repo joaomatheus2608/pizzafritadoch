@@ -67,6 +67,12 @@
 
   // Inicializa o cache com os dados padrão para chaves que não existem ou estão vazias
   function initDefaults() {
+    const currentVersion = localStorage.getItem(STORAGE_KEYS.DATA_VERSION);
+    if (currentVersion !== 'v3.0') {
+      setStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS || []);
+      localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v3.0');
+    }
+
     const checkArrayOrFill = (key, initial) => {
       try {
         const val = localStorage.getItem(key);
@@ -90,7 +96,6 @@
     if (!localStorage.getItem(STORAGE_KEYS.USERS))         setStored(STORAGE_KEYS.USERS,         []);
     if (!localStorage.getItem(STORAGE_KEYS.ADDRESSES))     setStored(STORAGE_KEYS.ADDRESSES,     []);
     if (!localStorage.getItem(STORAGE_KEYS.CASH_CLOSINGS)) setStored(STORAGE_KEYS.CASH_CLOSINGS, []);
-    localStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'v2.8');
   }
 
   initDefaults();
