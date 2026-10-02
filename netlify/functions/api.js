@@ -98,7 +98,7 @@ exports.handler = async function(event) {
     return respond(200, {});
   }
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
     return respond(500, { error: 'Variáveis de ambiente do servidor não configuradas.' });
   }
 

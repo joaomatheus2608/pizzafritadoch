@@ -172,7 +172,24 @@
               return publicUrlData.publicUrl;
             }
           }
-          // Se chegou aqui, upload falhou - usa base64 local
+
+          // Se o upload direto no client falhou, tenta via API Server-Side do Netlify
+          try {
+            const base64Pure = compressedDataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
+            const fnRes = await fetch('/.netlify/functions/api?action=upload-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                base64: base64Pure,
+                fileName: fileName,
+                mimeType: 'image/jpeg'
+              })
+            });
+            if (fnRes.ok) {
+              const fnJson = await fnRes.json();
+              if (fnJson && fnJson.url) return fnJson.url;
+            }
+          } catch {}
           console.warn('Storage upload falhou, usando imagem local comprimida.');
         } catch (e) {
           console.warn('Erro no Storage, usando imagem local comprimida:', e);
@@ -417,14 +434,36 @@
 
       if (supabase) {
         try {
-          const supabaseProd = { ...saved };
-          const { error } = await supabase.from('products').upsert(supabaseProd);
+          const dbCleanPayload = {
+            id: saved.id,
+            category_id: saved.category_id || null,
+            name: saved.name,
+            description: saved.description || '',
+            price: saved.price,
+            price_p: saved.price_p,
+            price_m: saved.price_m,
+            price_g: saved.price_g,
+            has_sizes: saved.has_sizes,
+            sizes: saved.sizes,
+            image_url: saved.image_url,
+            is_promo: Boolean(saved.is_promo),
+            is_active: saved.is_active !== false,
+            is_available: saved.is_available !== false,
+            order_index: saved.order_index,
+            sales_channel: saved.sales_channel || 'todos',
+            promo_price: saved.promo_price || null,
+            promo_days: saved.promo_days || [],
+            monday_price: saved.monday_price || null,
+            updated_at: saved.updated_at
+          };
+
+          const { error } = await supabase.from('products').upsert(dbCleanPayload);
           if (error) {
-            console.warn('Upsert direto via Supabase Client falhou (RLS ou erro de schema). Tentando API server-side:', error.message);
+            console.warn('Upsert direto via Supabase Client falhou. Tentando API server-side:', error.message);
             const apiRes = await fetch('/.netlify/functions/api?action=save-product', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(supabaseProd)
+              body: JSON.stringify(saved)
             });
             if (apiRes.ok) {
               const apiJson = await apiRes.json();

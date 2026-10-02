@@ -1,2 +1,4 @@
+/api/*      /.netlify/functions/api?action=:splat 200
+/api        /.netlify/functions/api               200
 /admin      /admin.html      200
 /cardapio   /cardapio.html   200
