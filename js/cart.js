@@ -120,17 +120,20 @@
     },
 
     async getDeliveryFee() {
-      if (this.selectedNeighborhood && this.selectedNeighborhood.delivery_fee !== undefined) {
+      if (this.deliveryType === 'pickup') {
+        return 0;
+      }
+      if (this.selectedNeighborhood && this.selectedNeighborhood.delivery_fee !== undefined && this.selectedNeighborhood.delivery_fee !== null) {
         return Number(this.selectedNeighborhood.delivery_fee);
       }
-      const settings = await window.db.getSettings();
-      return settings ? Number(settings.delivery_fee || 5.00) : 5.00;
+      // Antes de selecionar o bairro, não pré-define taxa de entrega fixa
+      return null;
     },
 
     async getTotal() {
       const sub = this.getSubtotal();
       const fee = await this.getDeliveryFee();
-      return sub + fee;
+      return sub + (fee !== null ? fee : 0);
     },
 
     async isMinOrderMet() {

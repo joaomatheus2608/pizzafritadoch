@@ -5003,15 +5003,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================
-  // ALERTA SONORO DE NOVO PEDIDO (BIP / CAMPAINHA)
+  // ALERTA SONORO DE NOVO PEDIDO (SINO DE RESTAURANTE)
   // ==========================================
   let isSoundEnabled = true;
   let audioCtx = null;
   let knownOrderIds = new Set();
   let isFirstLoad = true;
 
-  function playOrderNotificationSound() {
-    if (!isSoundEnabled) return;
+  // Desbloqueia o AudioContext no primeiro toque/clique do usuário
+  function unlockAudioContext() {
     try {
       const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtxClass) return;
@@ -5019,37 +5019,72 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
+    } catch (e) {}
+  }
+  document.addEventListener('click', unlockAudioContext, { passive: true });
+  document.addEventListener('touchstart', unlockAudioContext, { passive: true });
+  document.addEventListener('keydown', unlockAudioContext, { passive: true });
+
+  /**
+   * Toca um som harmônico realista de sino de balcão / campainha de delivery (Ding-Dong-Ding)
+   */
+  function playOrderNotificationSound() {
+    if (!isSoundEnabled) return;
+    try {
+      unlockAudioContext();
+      if (!audioCtx) return;
 
       const now = audioCtx.currentTime;
 
-      // Nota 1 (Campainha Ding - Tom Alto)
-      const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(587.33, now); // D5
-      osc1.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
-      gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.4, now + 0.04);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.55);
+      // Helper para criar uma badalada de sino com harmônicos e reverberação
+      const playBellTone = (fundamentalFreq, startTime, duration, volume = 0.4) => {
+        // Onda fundamental
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(fundamentalFreq, startTime);
+        gain1.gain.setValueAtTime(0, startTime);
+        gain1.gain.linearRampToValueAtTime(volume, startTime + 0.015);
+        gain1.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(startTime);
+        osc1.stop(startTime + duration);
 
-      // Nota 2 (Campainha Dong - Harmônico Ressonante)
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1046.50, now + 0.16); // C6
-      gain2.gain.setValueAtTime(0, now + 0.16);
-      gain2.gain.linearRampToValueAtTime(0.5, now + 0.20);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.start(now + 0.16);
-      osc2.stop(now + 1.0);
+        // Primeiro harmônico (brilho metálico do sino)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(fundamentalFreq * 2.02, startTime);
+        gain2.gain.setValueAtTime(0, startTime);
+        gain2.gain.linearRampToValueAtTime(volume * 0.4, startTime + 0.01);
+        gain2.gain.exponentialRampToValueAtTime(0.001, startTime + (duration * 0.7));
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(startTime);
+        osc2.stop(startTime + duration);
+
+        // Segundo harmônico sutil (ressonância do sino)
+        const osc3 = audioCtx.createOscillator();
+        const gain3 = audioCtx.createGain();
+        osc3.type = 'triangle';
+        osc3.frequency.setValueAtTime(fundamentalFreq * 3.01, startTime);
+        gain3.gain.setValueAtTime(0, startTime);
+        gain3.gain.linearRampToValueAtTime(volume * 0.2, startTime + 0.01);
+        gain3.gain.exponentialRampToValueAtTime(0.001, startTime + (duration * 0.4));
+        osc3.connect(gain3);
+        gain3.connect(audioCtx.destination);
+        osc3.start(startTime);
+        osc3.stop(startTime + duration);
+      };
+
+      // Sequência de 3 notas de sino alegres e cristalinas (Ding-Dong-Ding)
+      playBellTone(784.00, now, 1.2, 0.45);        // Sol (G5)
+      playBellTone(1046.50, now + 0.22, 1.4, 0.50); // Dó (C6)
+      playBellTone(1318.50, now + 0.46, 1.8, 0.55); // Mi (E6)
+
     } catch (e) {
-      console.warn('Falha ao reproduzir alerta sonoro:', e);
+      console.warn('Falha ao reproduzir sino de notificação:', e);
     }
   }
 
@@ -5060,20 +5095,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.soundIcon.className = 'fi fi-sr-bell';
         dom.soundIcon.style.color = '#d97706';
       }
-      if (dom.soundText) dom.soundText.textContent = 'Som Ativo';
-      dom.btnToggleSound.title = 'Campainha de novos pedidos ATIVADA (Clique para silenciar)';
+      if (dom.soundText) dom.soundText.textContent = 'Sino Ativo';
+      dom.btnToggleSound.title = 'Sino de novos pedidos ATIVADO (Clique para silenciar ou testar)';
     } else {
       if (dom.soundIcon) {
         dom.soundIcon.className = 'fi fi-sr-bell-slash';
         dom.soundIcon.style.color = '#94a3b8';
       }
-      if (dom.soundText) dom.soundText.textContent = 'Som Mudo';
-      dom.btnToggleSound.title = 'Campainha de novos pedidos MUTADA (Clique para ativar)';
+      if (dom.soundText) dom.soundText.textContent = 'Sino Mudo';
+      dom.btnToggleSound.title = 'Sino de novos pedidos MUTADO (Clique para ativar)';
     }
   }
 
   if (dom.btnToggleSound) {
     dom.btnToggleSound.addEventListener('click', () => {
+      unlockAudioContext();
       isSoundEnabled = !isSoundEnabled;
       updateSoundButtonUI();
       if (isSoundEnabled) {
@@ -5094,7 +5130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let hasNewIncomingOrder = false;
     ordersList.forEach(o => {
       const oId = String(o?.id);
-      if (o?.status === 'novo' && !knownOrderIds.has(oId)) {
+      if (oId && !knownOrderIds.has(oId)) {
         hasNewIncomingOrder = true;
       }
       if (oId) knownOrderIds.add(oId);
@@ -5102,10 +5138,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (hasNewIncomingOrder) {
       playOrderNotificationSound();
+      // Alerta visual no título da aba
+      const originalTitle = document.title;
+      document.title = '🔔 NOVO PEDIDO! — Pizza Frita do CH';
+      setTimeout(() => { document.title = originalTitle; }, 6000);
     }
   }
 
-  // Sincronização em tempo real entre abas e Supabase Realtime
+  // Sincronização entre abas
   window.addEventListener('storage', async (e) => {
     if (e.key === 'pizzafrita_orders' || e.key === 'pizzafrita_orders_ping') {
       await syncOrdersQuietly();
@@ -5115,6 +5155,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('pizzafrita_order_change', async () => {
     await syncOrdersQuietly();
   });
+
+  // Assinatura Supabase Realtime para capturar pedidos no mesmo segundo
+  try {
+    const sb = window.db?.supabase || window.supabaseClient;
+    if (sb && typeof sb.channel === 'function') {
+      sb.channel('admin-orders-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
+          console.log('[Realtime Admin] Novo evento de pedido:', payload);
+          await syncOrdersQuietly();
+        })
+        .subscribe();
+    }
+  } catch (e) {
+    console.warn('Erro ao inicializar Supabase Realtime channel:', e);
+  }
 
   // Função utilitária para sincronizar pedidos em background
   async function syncOrdersQuietly() {
@@ -5133,18 +5188,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Auto-refresh inteligente a cada 10 segundos para pedidos em tempo real
+  // Atualização automática a cada 1 minuto (60 segundos)
   setInterval(async () => {
-    // Se a aba estiver em segundo plano ou minimizada, não faz a requisição para economizar cota do Netlify
-    if (document.hidden) return;
     await syncOrdersQuietly();
-  }, 10000);
+  }, 60000);
 
-  // Sincroniza imediatamente ao retornar para a aba do painel
+  // Sincroniza imediatamente ao retornar ou focar na aba
   document.addEventListener('visibilitychange', async () => {
     if (!document.hidden) {
       await syncOrdersQuietly();
     }
+  });
+
+  window.addEventListener('focus', async () => {
+    await syncOrdersQuietly();
   });
 
   // Checa autenticação inicial

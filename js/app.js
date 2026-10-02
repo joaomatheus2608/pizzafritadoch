@@ -1052,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       dom.cartSubtotalVal.textContent = window.formatCurrency(subtotal);
-      dom.cartDeliveryFeeVal.textContent = window.cart.deliveryType === 'pickup' ? 'Grátis' : window.formatCurrency(fee);
+      dom.cartDeliveryFeeVal.textContent = window.cart.deliveryType === 'pickup' ? 'Grátis' : (fee !== null ? window.formatCurrency(fee) : 'A calcular');
       dom.cartTotalVal.textContent = window.formatCurrency(total);
 
       if (dom.cartMinOrderWarning) {
@@ -1155,7 +1155,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const total = await window.cart.getTotal();
 
     dom.checkoutSubtotalVal.textContent = window.formatCurrency(subtotal);
-    dom.checkoutFeeVal.textContent = window.cart.deliveryType === 'pickup' ? 'R$ 0,00 (Retirada)' : window.formatCurrency(fee);
+    if (window.cart.deliveryType === 'pickup') {
+      dom.checkoutFeeVal.textContent = 'R$ 0,00 (Retirada)';
+    } else if (fee !== null) {
+      dom.checkoutFeeVal.textContent = window.formatCurrency(fee);
+    } else {
+      dom.checkoutFeeVal.textContent = 'Selecione o bairro acima';
+    }
     dom.checkoutTotalVal.textContent = window.formatCurrency(total);
   }
 
