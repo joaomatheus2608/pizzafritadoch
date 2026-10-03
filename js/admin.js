@@ -88,6 +88,15 @@ function showInputPopup(title, subtitle, placeholder) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ==========================================
+  // ESTADO DE ALERTAS SONOROS (declarado aqui para evitar TDZ)
+  // ==========================================
+  let knownOrderIds = new Set();
+  let isFirstLoad = true;
+  let isSoundEnabled = true;
+  let audioCtx = null;
+  let pendingBeep = false; // toca no próximo clique se autoplay foi bloqueado
+
   let adminState = {
     settings: null,
     orders: [],
@@ -466,7 +475,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (tabId === 'pos' && typeof renderSalonTables === 'function') renderSalonTables();
-      if (tabId === 'orders' && typeof renderOrders === 'function') renderOrders();
+      if (tabId === 'orders') {
+        if (typeof renderOrders === 'function') renderOrders();
+        // Busca dados frescos do servidor ao entrar na aba de pedidos
+        if (typeof syncOrdersQuietly === 'function') syncOrdersQuietly();
+      }
       if (tabId === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
       if (tabId === 'products' && typeof renderProducts === 'function') renderProducts();
       if (tabId === 'categories' && typeof renderCategories === 'function') renderCategories();
@@ -5012,10 +5025,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // ALERTA SONORO DE NOVO PEDIDO (SINO DE RESTAURANTE DUAL-ENGINE)
   // ==========================================
-  let isSoundEnabled = true;
-  let audioCtx = null;
-  let knownOrderIds = new Set();
-  let isFirstLoad = true;
+  // (variáveis declaradas no topo do handler DOMContentLoaded para evitar TDZ)
 
   // Desbloqueia o AudioContext e o elemento HTML5 Audio no primeiro gesto do usuário
   function unlockAudioContext() {
@@ -5039,9 +5049,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {}
   }
 
-  document.addEventListener('click', unlockAudioContext, { passive: true });
-  document.addEventListener('touchstart', unlockAudioContext, { passive: true });
-  document.addEventListener('keydown', unlockAudioContext, { passive: true });
+  // Ao primeiro gesto: desbloqueia áudio e toca sino pendente
+  function handleFirstGesture() {
+    unlockAudioContext();
+    if (pendingBeep && isSoundEnabled) {
+      pendingBeep = false;
+      // Pequeno delay para garantir que o audioCtx foi retomado
+      setTimeout(() => playOrderNotificationSound(), 150);
+    }
+  }
+
+  document.addEventListener('click', handleFirstGesture, { passive: true });
+  document.addEventListener('touchstart', handleFirstGesture, { passive: true });
+  document.addEventListener('keydown', handleFirstGesture, { passive: true });
 
   /**
    * Toca o sino de delivery com motor duplo (HTML5 Audio + Web Audio API)
@@ -5062,16 +5082,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         const playPromise = bellEl.play();
         if (playPromise !== undefined) {
           playPromise
-            .then(() => { playedHtml5 = true; })
+            .then(() => { playedHtml5 = true; pendingBeep = false; })
             .catch(() => {
+              // Autoplay bloqueado — agenda para próximo clique
+              pendingBeep = true;
               // Fallback para novo objeto de áudio com Data URI
               try {
                 const snd = new Audio(window.BELL_SOUND_DATA_URI || 'sound/bell.wav');
                 snd.volume = 1.0;
-                snd.play().catch(() => {});
-              } catch (e) {}
+                snd.play()
+                  .then(() => { pendingBeep = false; })
+                  .catch(() => { pendingBeep = true; });
+              } catch (e) { pendingBeep = true; }
             });
         }
+      } else {
+        // Sem elemento HTML5: tenta criar um novo objeto
+        try {
+          const snd = new Audio(window.BELL_SOUND_DATA_URI || 'sound/bell.wav');
+          snd.volume = 1.0;
+          snd.play()
+            .then(() => { pendingBeep = false; })
+            .catch(() => { pendingBeep = true; });
+        } catch (e) { pendingBeep = true; }
       }
     } catch (e) {}
 
@@ -5269,7 +5302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.auth.isAdminLoggedIn()) {
       await syncOrdersQuietly();
     }
-  }, 60000);
+  }, 30000); // Polling a cada 30 segundos
 
   // Sincroniza imediatamente ao retornar ou focar na aba
   document.addEventListener('visibilitychange', async () => {
