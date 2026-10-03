@@ -559,6 +559,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       adminState.settings = bootstrap.settings || window.INITIAL_SETTINGS;
       adminState.orders = orders || [];
+
+      // Inicializa os IDs conhecidos logo no carregamento inicial
+      if (Array.isArray(orders)) {
+        knownOrderIds.clear();
+        orders.forEach(o => { if (o?.id) knownOrderIds.add(String(o.id)); });
+        isFirstLoad = false;
+      }
       adminState.products = (bootstrap.products && bootstrap.products.length > 0) ? bootstrap.products : (window.INITIAL_PRODUCTS || []);
       adminState.categories = (bootstrap.categories && bootstrap.categories.length > 0) ? bootstrap.categories : (window.INITIAL_CATEGORIES || []);
       adminState.optionals = (bootstrap.optionals && bootstrap.optionals.length > 0) ? bootstrap.optionals : (window.INITIAL_OPTIONALS || []);
@@ -5003,89 +5010,146 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================
-  // ALERTA SONORO DE NOVO PEDIDO (SINO DE RESTAURANTE)
+  // ALERTA SONORO DE NOVO PEDIDO (SINO DE RESTAURANTE DUAL-ENGINE)
   // ==========================================
   let isSoundEnabled = true;
   let audioCtx = null;
   let knownOrderIds = new Set();
   let isFirstLoad = true;
 
-  // Desbloqueia o AudioContext no primeiro toque/clique do usuário
+  // Desbloqueia o AudioContext e o elemento HTML5 Audio no primeiro gesto do usuário
   function unlockAudioContext() {
     try {
       const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtxClass) return;
-      if (!audioCtx) audioCtx = new AudioCtxClass();
-      if (audioCtx.state === 'suspended') {
+      if (!audioCtx && AudioCtxClass) {
+        audioCtx = new AudioCtxClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
+      }
+
+      const bellEl = document.getElementById('bellAudioElement');
+      if (bellEl) {
+        // Pré-carrega o áudio
+        if (!bellEl.src && window.BELL_SOUND_DATA_URI) {
+          bellEl.src = window.BELL_SOUND_DATA_URI;
+        }
+        bellEl.load();
       }
     } catch (e) {}
   }
+
   document.addEventListener('click', unlockAudioContext, { passive: true });
   document.addEventListener('touchstart', unlockAudioContext, { passive: true });
   document.addEventListener('keydown', unlockAudioContext, { passive: true });
 
   /**
-   * Toca um som harmônico realista de sino de balcão / campainha de delivery (Ding-Dong-Ding)
+   * Toca o sino de delivery com motor duplo (HTML5 Audio + Web Audio API)
    */
   function playOrderNotificationSound() {
     if (!isSoundEnabled) return;
+
+    unlockAudioContext();
+
+    let playedHtml5 = false;
+
+    // Motor 1: HTML5 Audio Element / Audio Object
     try {
-      unlockAudioContext();
-      if (!audioCtx) return;
+      const bellEl = document.getElementById('bellAudioElement');
+      if (bellEl) {
+        bellEl.currentTime = 0;
+        bellEl.volume = 1.0;
+        const playPromise = bellEl.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => { playedHtml5 = true; })
+            .catch(() => {
+              // Fallback para novo objeto de áudio com Data URI
+              try {
+                const snd = new Audio(window.BELL_SOUND_DATA_URI || 'sound/bell.wav');
+                snd.volume = 1.0;
+                snd.play().catch(() => {});
+              } catch (e) {}
+            });
+        }
+      }
+    } catch (e) {}
 
-      const now = audioCtx.currentTime;
+    // Motor 2: Web Audio API Synthesizer (Sino Harmônico Cristalino Ding-Dong-Ding)
+    try {
+      if (!audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) audioCtx = new AudioCtxClass();
+      }
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
 
-      // Helper para criar uma badalada de sino com harmônicos e reverberação
-      const playBellTone = (fundamentalFreq, startTime, duration, volume = 0.4) => {
-        // Onda fundamental
-        const osc1 = audioCtx.createOscillator();
-        const gain1 = audioCtx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(fundamentalFreq, startTime);
-        gain1.gain.setValueAtTime(0, startTime);
-        gain1.gain.linearRampToValueAtTime(volume, startTime + 0.015);
-        gain1.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-        osc1.connect(gain1);
-        gain1.connect(audioCtx.destination);
-        osc1.start(startTime);
-        osc1.stop(startTime + duration);
+        const playBellTone = (fundamentalFreq, startTime, duration, volume = 0.5) => {
+          const osc1 = audioCtx.createOscillator();
+          const gain1 = audioCtx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(fundamentalFreq, startTime);
+          gain1.gain.setValueAtTime(0, startTime);
+          gain1.gain.linearRampToValueAtTime(volume, startTime + 0.015);
+          gain1.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+          osc1.connect(gain1);
+          gain1.connect(audioCtx.destination);
+          osc1.start(startTime);
+          osc1.stop(startTime + duration);
 
-        // Primeiro harmônico (brilho metálico do sino)
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(fundamentalFreq * 2.02, startTime);
-        gain2.gain.setValueAtTime(0, startTime);
-        gain2.gain.linearRampToValueAtTime(volume * 0.4, startTime + 0.01);
-        gain2.gain.exponentialRampToValueAtTime(0.001, startTime + (duration * 0.7));
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.start(startTime);
-        osc2.stop(startTime + duration);
+          // Harmônico brilhante
+          const osc2 = audioCtx.createOscillator();
+          const gain2 = audioCtx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(fundamentalFreq * 2.01, startTime);
+          gain2.gain.setValueAtTime(0, startTime);
+          gain2.gain.linearRampToValueAtTime(volume * 0.45, startTime + 0.01);
+          gain2.gain.exponentialRampToValueAtTime(0.001, startTime + (duration * 0.7));
+          osc2.connect(gain2);
+          gain2.connect(audioCtx.destination);
+          osc2.start(startTime);
+          osc2.stop(startTime + duration);
+        };
 
-        // Segundo harmônico sutil (ressonância do sino)
-        const osc3 = audioCtx.createOscillator();
-        const gain3 = audioCtx.createGain();
-        osc3.type = 'triangle';
-        osc3.frequency.setValueAtTime(fundamentalFreq * 3.01, startTime);
-        gain3.gain.setValueAtTime(0, startTime);
-        gain3.gain.linearRampToValueAtTime(volume * 0.2, startTime + 0.01);
-        gain3.gain.exponentialRampToValueAtTime(0.001, startTime + (duration * 0.4));
-        osc3.connect(gain3);
-        gain3.connect(audioCtx.destination);
-        osc3.start(startTime);
-        osc3.stop(startTime + duration);
-      };
-
-      // Sequência de 3 notas de sino alegres e cristalinas (Ding-Dong-Ding)
-      playBellTone(784.00, now, 1.2, 0.45);        // Sol (G5)
-      playBellTone(1046.50, now + 0.22, 1.4, 0.50); // Dó (C6)
-      playBellTone(1318.50, now + 0.46, 1.8, 0.55); // Mi (E6)
-
+        playBellTone(784.00, now, 1.3, 0.45);        // Sol (G5)
+        playBellTone(1046.50, now + 0.22, 1.5, 0.50); // Dó (C6)
+        playBellTone(1318.50, now + 0.44, 1.8, 0.55); // Mi (E6)
+      }
     } catch (e) {
-      console.warn('Falha ao reproduzir sino de notificação:', e);
+      console.warn('Falha no sintetizador Web Audio:', e);
     }
+  }
+
+  // Toast Visual de Alerta de Novo Pedido no Topo
+  function showNewOrderToast(order) {
+    let toast = document.getElementById('newOrderToastBanner');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'newOrderToastBanner';
+      toast.style.cssText = `
+        position: fixed; top: 16px; right: 16px; z-index: 99999;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff; padding: 14px 20px; border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px;
+        font-family: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer;
+        animation: toastIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      `;
+      document.body.appendChild(toast);
+    }
+    const orderNum = order?.order_number ? `#${String(order.order_number).padStart(4, '0')}` : 'Novo';
+    const totalVal = order?.total ? window.formatCurrency(order.total) : '';
+    toast.innerHTML = `
+      <i class="fi fi-sr-bell" style="font-size: 1.4rem; color: #fef08a;"></i>
+      <div>
+        <div style="font-size: 1rem;">🔔 NOVO PEDIDO RECEBIDO!</div>
+        <div style="font-size: 0.82rem; font-weight: 500; opacity: 0.95;">Pedido ${orderNum} ${totalVal ? `• Total: ${totalVal}` : ''}</div>
+      </div>
+      <button style="background: none; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; margin-left: 8px;">✕</button>
+    `;
+    toast.style.display = 'flex';
+    toast.onclick = () => { toast.style.display = 'none'; };
+    setTimeout(() => { if (toast) toast.style.display = 'none'; }, 8000);
   }
 
   function updateSoundButtonUI() {
@@ -5096,7 +5160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.soundIcon.style.color = '#d97706';
       }
       if (dom.soundText) dom.soundText.textContent = 'Sino Ativo';
-      dom.btnToggleSound.title = 'Sino de novos pedidos ATIVADO (Clique para silenciar ou testar)';
+      dom.btnToggleSound.title = 'Sino de novos pedidos ATIVADO (Clique para testar o som)';
     } else {
       if (dom.soundIcon) {
         dom.soundIcon.className = 'fi fi-sr-bell-slash';
@@ -5110,9 +5174,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dom.btnToggleSound) {
     dom.btnToggleSound.addEventListener('click', () => {
       unlockAudioContext();
-      isSoundEnabled = !isSoundEnabled;
-      updateSoundButtonUI();
-      if (isSoundEnabled) {
+      if (!isSoundEnabled) {
+        isSoundEnabled = true;
+        updateSoundButtonUI();
+        playOrderNotificationSound();
+      } else {
+        // Toca para testar o sino
         playOrderNotificationSound();
       }
     });
@@ -5127,17 +5194,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    let hasNewIncomingOrder = false;
+    let newestOrder = null;
     ordersList.forEach(o => {
       const oId = String(o?.id);
       if (oId && !knownOrderIds.has(oId)) {
-        hasNewIncomingOrder = true;
+        newestOrder = o;
       }
       if (oId) knownOrderIds.add(oId);
     });
 
-    if (hasNewIncomingOrder) {
+    if (newestOrder) {
       playOrderNotificationSound();
+      showNewOrderToast(newestOrder);
+
       // Alerta visual no título da aba
       const originalTitle = document.title;
       document.title = '🔔 NOVO PEDIDO! — Pizza Frita do CH';
@@ -5152,7 +5221,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  window.addEventListener('pizzafrita_order_change', async () => {
+  window.addEventListener('pizzafrita_order_change', async (e) => {
+    if (e.detail) {
+      checkForNewOrdersAndBeep([e.detail]);
+    }
     await syncOrdersQuietly();
   });
 
@@ -5160,9 +5232,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const sb = window.db?.supabase || window.supabaseClient;
     if (sb && typeof sb.channel === 'function') {
-      sb.channel('admin-orders-realtime')
+      sb.channel('admin-orders-realtime-v3')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
           console.log('[Realtime Admin] Novo evento de pedido:', payload);
+          if (payload.new) {
+            checkForNewOrdersAndBeep([payload.new]);
+          }
           await syncOrdersQuietly();
         })
         .subscribe();
@@ -5173,6 +5248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Função utilitária para sincronizar pedidos em background
   async function syncOrdersQuietly() {
+    if (!window.auth.isAdminLoggedIn()) return;
     try {
       const freshOrders = await window.db.getOrders();
       checkForNewOrdersAndBeep(freshOrders);
@@ -5188,20 +5264,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Atualização automática a cada 1 minuto (60 segundos)
+  // Atualização automática a cada 1 minuto (60 segundos) sem travar
   setInterval(async () => {
-    await syncOrdersQuietly();
+    if (window.auth.isAdminLoggedIn()) {
+      await syncOrdersQuietly();
+    }
   }, 60000);
 
   // Sincroniza imediatamente ao retornar ou focar na aba
   document.addEventListener('visibilitychange', async () => {
-    if (!document.hidden) {
+    if (!document.hidden && window.auth.isAdminLoggedIn()) {
       await syncOrdersQuietly();
     }
   });
 
   window.addEventListener('focus', async () => {
-    await syncOrdersQuietly();
+    if (window.auth.isAdminLoggedIn()) {
+      await syncOrdersQuietly();
+    }
   });
 
   // Checa autenticação inicial

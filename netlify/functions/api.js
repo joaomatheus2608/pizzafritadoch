@@ -80,15 +80,19 @@ async function hashPasswordRaw(pass) {
   return createHash('sha256').update(pass).digest('hex');
 }
 
-function respond(statusCode, body) {
+function respond(statusCode, body, cacheMaxAge = 0) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS'
+  };
+  if (cacheMaxAge > 0) {
+    headers['Cache-Control'] = `public, max-age=${cacheMaxAge}, s-maxage=${cacheMaxAge * 2}, stale-while-revalidate=300`;
+  }
   return {
     statusCode,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS'
-    },
+    headers,
     body: JSON.stringify(body)
   };
 }
@@ -109,7 +113,7 @@ exports.handler = async function(event) {
 
   try {
     // -------------------------------------------------------
-    // GET BOOTSTRAP (Carregamento unificado em 1 requisição)
+    // GET BOOTSTRAP (Carregamento unificado em 1 requisição com Cache)
     // -------------------------------------------------------
     if (method === 'GET' && path === 'get-bootstrap') {
       const [settingsData, hoursData, categories, products, optionals, promotions, neighborhoods, couriers] = await Promise.all([
@@ -133,7 +137,7 @@ exports.handler = async function(event) {
           neighborhoods: neighborhoods || [],
           couriers: couriers || []
         }
-      });
+      }, 60); // 60 segundos de cache CDN para não estourar requisições
     }
 
     // -------------------------------------------------------

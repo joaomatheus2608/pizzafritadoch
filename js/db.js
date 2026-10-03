@@ -165,7 +165,7 @@
             .from('products')
             .upload(fileName, blob, {
               contentType: 'image/jpeg',
-              cacheControl: '3600',
+              cacheControl: '31536000',
               upsert: true
             });
 
@@ -699,7 +699,7 @@
             .from('orders')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(200);
+            .limit(60);
 
           if (!error && data && data.length > 0) {
             setStored(STORAGE_KEYS.ORDERS, data);
