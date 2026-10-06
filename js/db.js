@@ -1,5 +1,7 @@
 // ========================================================
-// PIZZA FRITA DO CH - CAMADA DE DADOS SUPABASE (CLOUD + OFFLINE CACHE)
+// PIZZA FRITA DO CH - CAMADA DE DADOS (API SERVER-SIDE)
+// Todas as chamadas passam pela Netlify Function /.netlify/functions/api
+// Nenhuma credencial do Supabase é exposta no browser.
 // ========================================================
 
 (function() {
@@ -19,30 +21,9 @@
     DATA_VERSION: 'pizzafrita_version_v2_7'
   };
 
-  // Inicializa o Cliente Supabase
-  let supabase = null;
-  const env = window.ENV || {};
-  const supabaseUrl = env.SUPABASE_URL || '';
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY || '';
-
-  if (window.supabase && supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder')) {
-    try {
-      supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
-        auth: { persistSession: false }
-      });
-      window.supabaseClient = supabase;
-    } catch (err) {
-      console.warn('Erro ao instanciar Supabase Client:', err);
-    }
-  }
-
-  function generateId(prefix = '') {
-    if (window.crypto && window.crypto.randomUUID) {
-      try { return window.crypto.randomUUID(); } catch {}
-    }
-    return `${prefix ? prefix + '-' : ''}${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  }
-
+  // ----------------------------------------
+  // Helpers de localStorage
+  // ----------------------------------------
   function getStored(key, fallback) {
     try {
       const val = localStorage.getItem(key);
@@ -65,7 +46,36 @@
     }
   }
 
-  // Inicializa o cache com os dados padrão para chaves que não existem ou estão vazias
+  function generateId(prefix = '') {
+    if (window.crypto && window.crypto.randomUUID) {
+      try { return window.crypto.randomUUID(); } catch {}
+    }
+    return `${prefix ? prefix + '-' : ''}${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  // ----------------------------------------
+  // Helper central de chamada à Netlify Function
+  // ----------------------------------------
+  async function api(action, options = {}) {
+    const { method = 'GET', body } = options;
+    const url = `/.netlify/functions/api?action=${action}`;
+    const fetchOptions = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (body) fetchOptions.body = JSON.stringify(body);
+    const res = await fetch(url, fetchOptions);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const json = await res.json();
+    return json.data !== undefined ? json.data : json;
+  }
+
+  // ----------------------------------------
+  // Inicialização de cache local
+  // ----------------------------------------
   function initDefaults() {
     const currentVersion = localStorage.getItem(STORAGE_KEYS.DATA_VERSION);
     if (currentVersion !== 'v3.0') {
@@ -101,7 +111,8 @@
   initDefaults();
 
   const db = {
-    supabase,
+    // Sem supabase client no browser
+    supabase: null,
 
     // ----------------------------------------
     // COMPRESSÃO E UPLOAD DE IMAGEM
@@ -151,119 +162,70 @@
     async uploadImage(file) {
       if (!file) return null;
 
-      // Comprime a imagem primeiro (400x400 JPEG ~70%) para garantir tamanho pequeno
       const compressedDataUrl = await this.compressImageFile(file, 400, 400, 0.7);
+      if (!compressedDataUrl) return null;
 
-      if (supabase) {
-        try {
-          // Converte base64 para Blob para upload no Storage
-          const res = await fetch(compressedDataUrl);
-          const blob = await res.blob();
-          const fileName = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
-
-          const { data, error } = await supabase.storage
-            .from('products')
-            .upload(fileName, blob, {
-              contentType: 'image/jpeg',
-              cacheControl: '31536000',
-              upsert: true
-            });
-
-          if (!error && data) {
-            const { data: publicUrlData } = supabase.storage
-              .from('products')
-              .getPublicUrl(fileName);
-            if (publicUrlData && publicUrlData.publicUrl) {
-              return publicUrlData.publicUrl;
-            }
-          }
-
-          // Se o upload direto no client falhou, tenta via API Server-Side do Netlify
-          try {
-            const base64Pure = compressedDataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
-            const fnRes = await fetch('/.netlify/functions/api?action=upload-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                base64: base64Pure,
-                fileName: fileName,
-                mimeType: 'image/jpeg'
-              })
-            });
-            if (fnRes.ok) {
-              const fnJson = await fnRes.json();
-              if (fnJson && fnJson.url) return fnJson.url;
-            }
-          } catch {}
-          console.warn('Storage upload falhou, usando imagem local comprimida.');
-        } catch (e) {
-          console.warn('Erro no Storage, usando imagem local comprimida:', e);
+      try {
+        const base64Pure = compressedDataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
+        const fileName = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+        const fnRes = await fetch('/.netlify/functions/api?action=upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64: base64Pure, fileName, mimeType: 'image/jpeg' })
+        });
+        if (fnRes.ok) {
+          const fnJson = await fnRes.json();
+          if (fnJson && fnJson.url) return fnJson.url;
         }
+      } catch (e) {
+        console.warn('Erro no upload via API, usando base64 local:', e);
       }
 
-      // Fallback: retorna base64 comprimida (funciona localmente)
+      // Fallback: retorna base64 comprimida
       return compressedDataUrl;
     },
 
     // ----------------------------------------
-    // 0. BOOTSTRAP UNIFICADO (Carrega Tudo com Fallback Seguro)
+    // 0. BOOTSTRAP UNIFICADO
     // ----------------------------------------
     async getBootstrap() {
       try {
-        const [settings, hours, categories, products, optionals, neighborhoods, couriers, promotions] = await Promise.all([
-          this.getSettings(),
-          this.getOperatingHours(),
-          this.getCategories(),
-          this.getProducts(),
-          this.getOptionals(),
-          this.getNeighborhoods(),
-          this.getCouriers(),
-          this.getPromotions()
-        ]);
-
-        return {
-          settings: settings || window.INITIAL_SETTINGS,
-          hours: hours || window.INITIAL_OPERATING_HOURS,
-          categories: (categories && categories.length > 0) ? categories : window.INITIAL_CATEGORIES,
-          products: (products && products.length > 0) ? products : window.INITIAL_PRODUCTS,
-          optionals: (optionals && optionals.length > 0) ? optionals : window.INITIAL_OPTIONALS,
-          neighborhoods: (neighborhoods && neighborhoods.length > 0) ? neighborhoods : window.INITIAL_NEIGHBORHOODS,
-          couriers: (couriers && couriers.length > 0) ? couriers : window.INITIAL_COURIERS,
-          promotions: promotions || []
-        };
+        const result = await api('get-bootstrap');
+        if (result && result.settings) {
+          setStored(STORAGE_KEYS.SETTINGS, result.settings);
+          setStored(STORAGE_KEYS.HOURS, result.hours);
+          setStored(STORAGE_KEYS.CATEGORIES, result.categories);
+          setStored(STORAGE_KEYS.PRODUCTS, result.products);
+          setStored(STORAGE_KEYS.OPTIONALS, result.optionals);
+          setStored(STORAGE_KEYS.NEIGHBORHOODS, result.neighborhoods);
+          setStored(STORAGE_KEYS.COURIERS, result.couriers);
+          setStored(STORAGE_KEYS.PROMOTIONS, result.promotions);
+          return result;
+        }
       } catch (e) {
-        console.warn('Erro ao carregar dados do Supabase, usando dados locais:', e);
-        return {
-          settings: getStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS),
-          hours: getStored(STORAGE_KEYS.HOURS, window.INITIAL_OPERATING_HOURS),
-          categories: getStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES),
-          products: getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS),
-          optionals: getStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS),
-          neighborhoods: getStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS),
-          couriers: getStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS),
-          promotions: getStored(STORAGE_KEYS.PROMOTIONS, [])
-        };
+        console.warn('Erro ao carregar bootstrap via API, usando cache local:', e);
       }
+
+      return {
+        settings: getStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS),
+        hours: getStored(STORAGE_KEYS.HOURS, window.INITIAL_OPERATING_HOURS),
+        categories: getStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES),
+        products: getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS),
+        optionals: getStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS),
+        neighborhoods: getStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS),
+        couriers: getStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS),
+        promotions: getStored(STORAGE_KEYS.PROMOTIONS, [])
+      };
     },
 
     // ----------------------------------------
     // 1. CONFIGURAÇÕES
     // ----------------------------------------
     async getSettings() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('settings')
-            .select('*')
-            .eq('id', 'store-settings')
-            .maybeSingle();
-
-          if (!error && data) {
-            setStored(STORAGE_KEYS.SETTINGS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-settings');
+        if (data) { setStored(STORAGE_KEYS.SETTINGS, data); return data; }
+      } catch (e) {}
       return getStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS);
     },
 
@@ -271,49 +233,40 @@
       const current = getStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS);
       const updated = { ...current, ...newSettings, id: 'store-settings', updated_at: new Date().toISOString() };
       setStored(STORAGE_KEYS.SETTINGS, updated);
-
-      if (supabase) {
-        try {
-          await supabase.from('settings').upsert(updated);
-        } catch (e) {}
-      }
+      try {
+        await api('update-settings', { method: 'POST', body: updated });
+      } catch (e) { console.warn('Erro ao salvar settings:', e); }
       return updated;
     },
 
     async verifyAdminPassword(password) {
-      const settings = await this.getSettings();
-      const expected = settings?.admin_password_hash || 'chomelhor';
-      const cleanPass = String(password).trim();
-      return cleanPass === String(expected).trim() || cleanPass === 'chomelhor';
+      try {
+        const result = await api('admin-login', { method: 'POST', body: { password } });
+        return result && result.success === true;
+      } catch (e) {
+        // Fallback local
+        const settings = getStored(STORAGE_KEYS.SETTINGS, window.INITIAL_SETTINGS);
+        const expected = settings?.admin_password_hash || 'chomelhor';
+        return String(password).trim() === String(expected).trim() || String(password).trim() === 'chomelhor';
+      }
     },
 
     // ----------------------------------------
     // 2. HORÁRIOS DE FUNCIONAMENTO
     // ----------------------------------------
     async getOperatingHours() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('operating_hours')
-            .select('*')
-            .order('day_of_week', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.HOURS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-hours');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.HOURS, data); return data; }
+      } catch (e) {}
       return getStored(STORAGE_KEYS.HOURS, window.INITIAL_OPERATING_HOURS);
     },
 
     async updateOperatingHours(hours) {
       setStored(STORAGE_KEYS.HOURS, hours);
-      if (supabase) {
-        try {
-          await supabase.from('operating_hours').upsert(hours, { onConflict: 'day_of_week' });
-        } catch (e) {}
-      }
+      try {
+        await api('update-hours', { method: 'POST', body: { hours } });
+      } catch (e) { console.warn('Erro ao salvar horários:', e); }
       return hours;
     },
 
@@ -321,56 +274,40 @@
     // 3. CATEGORIAS
     // ----------------------------------------
     async getCategories() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .order('order_index', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.CATEGORIES, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-categories');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.CATEGORIES, data); return data; }
+      } catch (e) {}
       const list = getStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES);
       return (list && list.length > 0 ? list : window.INITIAL_CATEGORIES).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     },
 
     async saveCategory(cat) {
+      try {
+        const data = await api('save-category', { method: 'POST', body: cat });
+        if (data) {
+          const list = getStored(STORAGE_KEYS.CATEGORIES, []);
+          const idx = list.findIndex(c => c.id === data.id);
+          if (idx >= 0) list[idx] = data; else list.push(data);
+          setStored(STORAGE_KEYS.CATEGORIES, list);
+          return data;
+        }
+      } catch (e) { console.warn('Erro ao salvar categoria:', e); }
+      // Fallback local
       const list = getStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES);
-      const saved = {
-        ...cat,
-        id: cat.id || generateId('cat'),
-        name: (cat.name || '').trim(),
-        slug: (cat.slug || cat.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        order_index: Number(cat.order_index) || (list.length + 1),
-        is_active: cat.is_active !== false
-      };
-
+      const saved = { ...cat, id: cat.id || generateId('cat') };
       const idx = list.findIndex(c => c.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.CATEGORIES, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('categories').upsert(saved);
-        } catch (e) {}
-      }
       return saved;
     },
 
     async deleteCategory(id) {
+      try {
+        await api('delete-category', { method: 'DELETE', body: { id } });
+      } catch (e) { console.warn('Erro ao deletar categoria:', e); }
       const list = getStored(STORAGE_KEYS.CATEGORIES, window.INITIAL_CATEGORIES).filter(c => c.id !== id);
       setStored(STORAGE_KEYS.CATEGORIES, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('categories').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
@@ -378,109 +315,31 @@
     // 4. PRODUTOS
     // ----------------------------------------
     async getProducts() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .order('order_index', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            // Normaliza campo sizes se vier em string
-            const normalized = data.map(p => {
-              if (p.sizes && typeof p.sizes === 'string') {
-                try { p.sizes = JSON.parse(p.sizes); } catch {}
-              }
-              p.has_sizes = Boolean(p.has_sizes === true || p.has_sizes === 'true');
-              if (!p.has_sizes) {
-                p.price_p = null;
-                p.price_m = null;
-                p.price_g = null;
-                p.sizes = [];
-              }
-              return p;
-            });
-            setStored(STORAGE_KEYS.PRODUCTS, normalized);
-            return normalized;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-products');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.PRODUCTS, data); return data; }
+      } catch (e) {}
       const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
       return (list && list.length > 0 ? list : window.INITIAL_PRODUCTS).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     },
 
     async saveProduct(prod) {
-      const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
-
-      const imageUrl = prod.image_url || 'logo.jpg';
-      const hasSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
-
-      const saved = {
-        ...prod,
-        id: prod.id || generateId('prod'),
-        name: (prod.name || '').trim(),
-        price: (prod.price !== null && prod.price !== undefined && prod.price !== '') ? Number(prod.price) : (hasSizes && prod.price_p ? Number(prod.price_p) : 0),
-        price_p: hasSizes && prod.price_p !== undefined && prod.price_p !== null ? Number(prod.price_p) : null,
-        price_m: hasSizes && prod.price_m !== undefined && prod.price_m !== null ? Number(prod.price_m) : null,
-        price_g: hasSizes && prod.price_g !== undefined && prod.price_g !== null ? Number(prod.price_g) : null,
-        has_sizes: hasSizes,
-        sizes: hasSizes ? (prod.sizes || []) : [],
-        is_active: prod.is_active !== false,
-        is_available: prod.is_available !== false,
-        order_index: Number(prod.order_index) || (list.length + 1),
-        image_url: imageUrl,
-        updated_at: new Date().toISOString()
-      };
-
-      const idx = list.findIndex(p => p.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
-      setStored(STORAGE_KEYS.PRODUCTS, list);
-
-      if (supabase) {
-        try {
-          const dbCleanPayload = {
-            id: saved.id,
-            category_id: saved.category_id || null,
-            name: saved.name,
-            description: saved.description || '',
-            price: saved.price,
-            price_p: saved.price_p,
-            price_m: saved.price_m,
-            price_g: saved.price_g,
-            has_sizes: saved.has_sizes,
-            sizes: saved.sizes,
-            image_url: saved.image_url,
-            is_promo: Boolean(saved.is_promo),
-            is_active: saved.is_active !== false,
-            is_available: saved.is_available !== false,
-            order_index: saved.order_index,
-            sales_channel: saved.sales_channel || 'todos',
-            promo_price: saved.promo_price || null,
-            promo_days: saved.promo_days || [],
-            monday_price: saved.monday_price || null,
-            updated_at: saved.updated_at
-          };
-
-          const { error } = await supabase.from('products').upsert(dbCleanPayload);
-          if (error) {
-            console.warn('Upsert direto via Supabase Client falhou. Tentando API server-side:', error.message);
-            const apiRes = await fetch('/.netlify/functions/api?action=save-product', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(saved)
-            });
-            if (apiRes.ok) {
-              const apiJson = await apiRes.json();
-              if (apiJson && apiJson.data) {
-                return { ...saved, ...apiJson.data };
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Erro ao salvar produto no Supabase:', e);
+      try {
+        const data = await api('save-product', { method: 'POST', body: prod });
+        if (data) {
+          const list = getStored(STORAGE_KEYS.PRODUCTS, []);
+          const idx = list.findIndex(p => p.id === data.id);
+          if (idx >= 0) list[idx] = data; else list.push(data);
+          setStored(STORAGE_KEYS.PRODUCTS, list);
+          return data;
         }
-      }
+      } catch (e) { console.warn('Erro ao salvar produto:', e); }
+      // Fallback local
+      const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
+      const saved = { ...prod, id: prod.id || generateId('prod'), updated_at: new Date().toISOString() };
+      const idx = list.findIndex(p => p.id === saved.id);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
+      setStored(STORAGE_KEYS.PRODUCTS, list);
       return saved;
     },
 
@@ -491,23 +350,18 @@
         p.is_available = Boolean(isAvailable);
         setStored(STORAGE_KEYS.PRODUCTS, list);
       }
-      if (supabase) {
-        try {
-          await supabase.from('products').update({ is_available: Boolean(isAvailable) }).eq('id', id);
-        } catch (e) {}
-      }
+      try {
+        await api('save-product', { method: 'POST', body: { id, is_available: Boolean(isAvailable) } });
+      } catch (e) {}
       return p;
     },
 
     async deleteProduct(id) {
+      try {
+        await api('delete-product', { method: 'DELETE', body: { id } });
+      } catch (e) { console.warn('Erro ao deletar produto:', e); }
       const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS).filter(p => p.id !== id);
       setStored(STORAGE_KEYS.PRODUCTS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('products').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
@@ -515,63 +369,50 @@
     // 5. ADICIONAIS
     // ----------------------------------------
     async getOptionals() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('optionals')
-            .select('*')
-            .order('order_index', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.OPTIONALS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-optionals');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.OPTIONALS, data); return data; }
+      } catch (e) {}
       const list = getStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS);
       return list && list.length > 0 ? list : window.INITIAL_OPTIONALS;
     },
 
     async saveOptional(opt) {
+      try {
+        const data = await api('save-optional', { method: 'POST', body: opt });
+        if (data) {
+          const list = getStored(STORAGE_KEYS.OPTIONALS, []);
+          const idx = list.findIndex(o => o.id === data.id);
+          if (idx >= 0) list[idx] = data; else list.push(data);
+          setStored(STORAGE_KEYS.OPTIONALS, list);
+          return data;
+        }
+      } catch (e) { console.warn('Erro ao salvar adicional:', e); }
       const list = getStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS);
-      const saved = {
-        ...opt,
-        id: opt.id || generateId('opt'),
-        name: (opt.name || '').trim(),
-        price: Number(opt.price) || 0,
-        is_active: opt.is_active !== false,
-        order_index: Number(opt.order_index) || (list.length + 1)
-      };
-
+      const saved = { ...opt, id: opt.id || generateId('opt') };
       const idx = list.findIndex(o => o.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.OPTIONALS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('optionals').upsert(saved);
-        } catch (e) {}
-      }
       return saved;
     },
 
     async deleteOptional(id) {
+      try {
+        await api('delete-optional', { method: 'DELETE', body: { id } });
+      } catch (e) { console.warn('Erro ao deletar adicional:', e); }
       const list = getStored(STORAGE_KEYS.OPTIONALS, window.INITIAL_OPTIONALS).filter(o => o.id !== id);
       setStored(STORAGE_KEYS.OPTIONALS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('optionals').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
     // ----------------------------------------
-    // 6. PROMOÇÕES DO DIA
+    // 6. PROMOÇÕES
     // ----------------------------------------
     async getPromotions() {
+      try {
+        const data = await api('get-promotions');
+        if (data) { setStored(STORAGE_KEYS.PROMOTIONS, data); return data; }
+      } catch (e) {}
       return getStored(STORAGE_KEYS.PROMOTIONS, []);
     },
 
@@ -579,56 +420,39 @@
     // 7. BAIRROS E TAXAS DE ENTREGA
     // ----------------------------------------
     async getNeighborhoods() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('neighborhoods')
-            .select('*')
-            .order('order_index', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.NEIGHBORHOODS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-neighborhoods');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.NEIGHBORHOODS, data); return data; }
+      } catch (e) {}
       const list = getStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS);
       return list && list.length > 0 ? list : window.INITIAL_NEIGHBORHOODS;
     },
 
     async saveNeighborhood(n) {
+      try {
+        const data = await api('save-neighborhood', { method: 'POST', body: n });
+        if (data) {
+          const list = getStored(STORAGE_KEYS.NEIGHBORHOODS, []);
+          const idx = list.findIndex(b => b.id === data.id);
+          if (idx >= 0) list[idx] = data; else list.push(data);
+          setStored(STORAGE_KEYS.NEIGHBORHOODS, list);
+          return data;
+        }
+      } catch (e) { console.warn('Erro ao salvar bairro:', e); }
       const list = getStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS);
-      const saved = {
-        ...n,
-        id: n.id || generateId('bairro'),
-        name: (n.name || '').trim(),
-        delivery_fee: Number(n.delivery_fee) || 0,
-        is_active: n.is_active !== false,
-        order_index: Number(n.order_index) || (list.length + 1)
-      };
-
+      const saved = { ...n, id: n.id || generateId('bairro') };
       const idx = list.findIndex(b => b.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.NEIGHBORHOODS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('neighborhoods').upsert(saved);
-        } catch (e) {}
-      }
       return saved;
     },
 
     async deleteNeighborhood(id) {
+      try {
+        await api('delete-neighborhood', { method: 'DELETE', body: { id } });
+      } catch (e) { console.warn('Erro ao deletar bairro:', e); }
       const list = getStored(STORAGE_KEYS.NEIGHBORHOODS, window.INITIAL_NEIGHBORHOODS).filter(b => b.id !== id);
       setStored(STORAGE_KEYS.NEIGHBORHOODS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('neighborhoods').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
@@ -636,81 +460,46 @@
     // 8. ENTREGADORES
     // ----------------------------------------
     async getCouriers() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('couriers')
-            .select('*')
-            .order('created_at', { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.COURIERS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-couriers');
+        if (data && data.length > 0) { setStored(STORAGE_KEYS.COURIERS, data); return data; }
+      } catch (e) {}
       const list = getStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS);
       return list && list.length > 0 ? list : window.INITIAL_COURIERS;
     },
 
     async saveCourier(c) {
+      try {
+        const data = await api('save-courier', { method: 'POST', body: c });
+        if (data) {
+          const list = getStored(STORAGE_KEYS.COURIERS, []);
+          const idx = list.findIndex(cour => cour.id === data.id);
+          if (idx >= 0) list[idx] = data; else list.push(data);
+          setStored(STORAGE_KEYS.COURIERS, list);
+          return data;
+        }
+      } catch (e) { console.warn('Erro ao salvar entregador:', e); }
       const list = getStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS);
-      const saved = {
-        ...c,
-        id: c.id || generateId('cour'),
-        name: (c.name || '').trim(),
-        phone: c.phone || '',
-        is_active: c.is_active !== false
-      };
-
+      const saved = { ...c, id: c.id || generateId('cour') };
       const idx = list.findIndex(cour => cour.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.COURIERS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('couriers').upsert(saved);
-        } catch (e) {}
-      }
       return saved;
     },
 
     async deleteCourier(id) {
+      try {
+        await api('delete-courier', { method: 'DELETE', body: { id } });
+      } catch (e) { console.warn('Erro ao deletar entregador:', e); }
       const list = getStored(STORAGE_KEYS.COURIERS, window.INITIAL_COURIERS).filter(c => c.id !== id);
       setStored(STORAGE_KEYS.COURIERS, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('couriers').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
     // ----------------------------------------
-    // 9. PEDIDOS (ORDERS)
+    // 9. PEDIDOS
     // ----------------------------------------
     async getOrders() {
-      // 1. Tenta Supabase Client direto
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(60);
-
-          if (!error && data && data.length > 0) {
-            setStored(STORAGE_KEYS.ORDERS, data);
-            return data;
-          }
-        } catch (e) {
-          console.warn('Falha ao consultar orders no Supabase client:', e);
-        }
-      }
-
-      // 2. Tenta Netlify Serverless API
       try {
         const res = await fetch('/.netlify/functions/api?action=get-orders');
         if (res.ok) {
@@ -721,8 +510,6 @@
           }
         }
       } catch (e) {}
-
-      // 3. Fallback Cache Local
       const list = getStored(STORAGE_KEYS.ORDERS, []);
       return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     },
@@ -757,47 +544,24 @@
       list.unshift(newOrder);
       setStored(STORAGE_KEYS.ORDERS, list);
 
-      let savedCloudOrder = null;
-
-      // 1. Tenta salvar via Supabase Client
-      if (supabase) {
-        try {
-          const { data, error } = await supabase.from('orders').insert([newOrder]).select().single();
-          if (!error && data) {
-            savedCloudOrder = data;
-          } else if (error) {
-            console.warn('Erro ao inserir pedido no Supabase client:', error.message || error);
+      try {
+        const res = await fetch('/.netlify/functions/api?action=create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder)
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data) {
+            newOrder.id = json.data.id || newOrder.id;
+            newOrder.order_number = json.data.order_number || newOrder.order_number;
+            const idx = list.findIndex(o => o.id === newOrder.id || o.id === orderPayload.id);
+            if (idx >= 0) list[idx] = newOrder;
+            setStored(STORAGE_KEYS.ORDERS, list);
           }
-        } catch (e) {
-          console.warn('Exceção ao inserir pedido no Supabase client:', e);
         }
-      }
-
-      // 2. Se não salvou via Supabase client, tenta via Netlify Functions API
-      if (!savedCloudOrder) {
-        try {
-          const res = await fetch('/.netlify/functions/api?action=create-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newOrder)
-          });
-          if (res.ok) {
-            const json = await res.json();
-            if (json?.data) {
-              savedCloudOrder = json.data;
-            }
-          }
-        } catch (e) {
-          console.warn('Exceção ao salvar pedido via API Netlify:', e);
-        }
-      }
-
-      if (savedCloudOrder) {
-        newOrder.id = savedCloudOrder.id || newOrder.id;
-        newOrder.order_number = savedCloudOrder.order_number || newOrder.order_number;
-        const idx = list.findIndex(o => o.id === newOrder.id || o.id === orderPayload.id);
-        if (idx >= 0) list[idx] = newOrder;
-        setStored(STORAGE_KEYS.ORDERS, list);
+      } catch (e) {
+        console.warn('Erro ao criar pedido via API:', e);
       }
 
       try {
@@ -819,21 +583,15 @@
         setStored(STORAGE_KEYS.ORDERS, list);
       }
 
-      const updates = { status, updated_at: new Date().toISOString() };
+      const updates = { id: orderId, status, updated_at: new Date().toISOString() };
       if (notes !== null) updates.notes = notes;
       if (courierName !== null) updates.courier_name = courierName;
-
-      if (supabase) {
-        try {
-          await supabase.from('orders').update(updates).eq('id', orderId);
-        } catch (e) {}
-      }
 
       try {
         await fetch('/.netlify/functions/api?action=update-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: orderId, ...updates })
+          body: JSON.stringify(updates)
         });
       } catch (e) {}
 
@@ -846,21 +604,17 @@
     },
 
     // ----------------------------------------
-    // 10. CLIENTES E AUTENTICAÇÃO
+    // 10. CLIENTES
     // ----------------------------------------
     async getUserByPhone(phone) {
       const clean = String(phone).replace(/\D/g, '');
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('phone', clean)
-            .maybeSingle();
-
-          if (!error && data) return data;
-        } catch (e) {}
-      }
+      try {
+        const res = await fetch(`/.netlify/functions/api?action=get-user-by-phone&phone=${clean}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data) return json.data;
+        }
+      } catch (e) {}
       const users = getStored(STORAGE_KEYS.USERS, []);
       return users.find(u => String(u.phone).replace(/\D/g, '') === clean) || null;
     },
@@ -875,70 +629,42 @@
       };
 
       const idx = users.findIndex(u => u.phone === saved.phone || u.id === saved.id);
-      if (idx >= 0) users[idx] = saved;
-      else users.push(saved);
+      if (idx >= 0) users[idx] = saved; else users.push(saved);
       setStored(STORAGE_KEYS.USERS, users);
 
-      if (supabase) {
-        try {
-          await supabase.from('users').upsert(saved);
-        } catch (e) {}
-      }
+      try {
+        await api('save-user', { method: 'POST', body: saved });
+      } catch (e) {}
       return saved;
     },
 
     // ----------------------------------------
-    // 11. ENDEREÇOS SALVOS
+    // 11. ENDEREÇOS
     // ----------------------------------------
     async getUserAddresses(userId) {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('addresses')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-
-          if (!error && data) {
-            setStored(STORAGE_KEYS.ADDRESSES, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const res = await fetch(`/.netlify/functions/api?action=get-user-addresses&user_id=${userId}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data) { setStored(STORAGE_KEYS.ADDRESSES, json.data); return json.data; }
+        }
+      } catch (e) {}
       const addresses = getStored(STORAGE_KEYS.ADDRESSES, []);
       return addresses.filter(a => a.user_id === userId);
     },
 
     async saveAddress(addrData) {
       const list = getStored(STORAGE_KEYS.ADDRESSES, []);
-      const saved = {
-        ...addrData,
-        id: addrData.id || generateId('addr'),
-        created_at: new Date().toISOString()
-      };
-
+      const saved = { ...addrData, id: addrData.id || generateId('addr'), created_at: new Date().toISOString() };
       const idx = list.findIndex(a => a.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.ADDRESSES, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('addresses').upsert(saved);
-        } catch (e) {}
-      }
       return saved;
     },
 
     async deleteAddress(id) {
       const list = getStored(STORAGE_KEYS.ADDRESSES, []).filter(a => a.id !== id);
       setStored(STORAGE_KEYS.ADDRESSES, list);
-
-      if (supabase) {
-        try {
-          await supabase.from('addresses').delete().eq('id', id);
-        } catch (e) {}
-      }
       return true;
     },
 
@@ -946,58 +672,26 @@
     // 12. FECHAMENTO DE CAIXA
     // ----------------------------------------
     async getCashClosings() {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('cash_closings')
-            .select('*')
-            .order('date_ref', { ascending: false });
-
-          if (!error && data) {
-            setStored(STORAGE_KEYS.CASH_CLOSINGS, data);
-            return data;
-          }
-        } catch (e) {}
-      }
+      try {
+        const data = await api('get-cash-closings');
+        if (data) { setStored(STORAGE_KEYS.CASH_CLOSINGS, data); return data; }
+      } catch (e) {}
       return getStored(STORAGE_KEYS.CASH_CLOSINGS, []);
     },
 
     async saveCashClosing(cashData) {
       const list = getStored(STORAGE_KEYS.CASH_CLOSINGS, []);
-      const saved = {
-        ...cashData,
-        id: cashData.id || generateId('cash'),
-        created_at: new Date().toISOString()
-      };
-
+      const saved = { ...cashData, id: cashData.id || generateId('cash'), created_at: new Date().toISOString() };
       const idx = list.findIndex(c => c.date_ref === saved.date_ref || c.id === saved.id);
-      if (idx >= 0) list[idx] = saved;
-      else list.push(saved);
+      if (idx >= 0) list[idx] = saved; else list.push(saved);
       setStored(STORAGE_KEYS.CASH_CLOSINGS, list);
 
-      if (supabase) {
-        try {
-          await supabase.from('cash_closings').upsert(saved);
-        } catch (e) {}
-      }
+      try {
+        await api('save-cash-closing', { method: 'POST', body: saved });
+      } catch (e) { console.warn('Erro ao salvar fechamento de caixa:', e); }
       return saved;
     }
   };
-
-  // Setup Supabase Realtime Listener
-  if (supabase) {
-    try {
-      supabase
-        .channel('public:orders')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
-          try {
-            window.dispatchEvent(new CustomEvent('pizzafrita_order_change', { detail: payload }));
-            localStorage.setItem('pizzafrita_orders_ping', Date.now().toString());
-          } catch {}
-        })
-        .subscribe();
-    } catch (e) {}
-  }
 
   window.db = db;
 })();
