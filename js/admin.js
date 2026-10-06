@@ -3580,6 +3580,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     `).join('');
   }
 
+  function populateOptTargetSelect(selectedTarget, applicableCategoryIds = []) {
+    if (!dom.editOptTarget) return;
+    
+    let optionsHtml = `
+      <option value="all">Todas as Categorias do Cardápio</option>
+    `;
+
+    (adminState.categories || []).forEach(cat => {
+      optionsHtml += `<option value="${cat.id}">Apenas ${cat.name}</option>`;
+    });
+
+    optionsHtml += `<option value="custom">Selecionar Várias Categorias...</option>`;
+    dom.editOptTarget.innerHTML = optionsHtml;
+
+    if (applicableCategoryIds && applicableCategoryIds.length > 1) {
+      dom.editOptTarget.value = 'custom';
+    } else if (applicableCategoryIds && applicableCategoryIds.length === 1) {
+      dom.editOptTarget.value = applicableCategoryIds[0];
+    } else if (selectedTarget && selectedTarget !== 'all' && selectedTarget !== 'custom') {
+      dom.editOptTarget.value = selectedTarget;
+    } else {
+      dom.editOptTarget.value = selectedTarget || 'all';
+    }
+  }
+
   function openOptionalModal(optId = null) {
     const catSection = document.getElementById('optCategoriesCheckboxesSection');
 
@@ -3589,19 +3614,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       dom.optionalModalTitle.textContent = 'Editar Adicional';
       dom.editOptId.value = opt.id;
       dom.editOptName.value = opt.name || '';
-      dom.editOptPrice.value = opt.price !== undefined && opt.price !== null ? opt.price : '3.00';
+      dom.editOptPrice.value = opt.price !== undefined && opt.price !== null ? opt.price : '4.00';
       dom.editOptActive.value = String(opt.is_active !== false);
-      const isCustom = opt.target === 'custom' || (Array.isArray(opt.applicable_category_ids) && opt.applicable_category_ids.length > 0);
-      dom.editOptTarget.value = isCustom ? 'custom' : 'all';
+      const isMultiCustom = (Array.isArray(opt.applicable_category_ids) && opt.applicable_category_ids.length > 1);
+      populateOptTargetSelect(opt.target, opt.applicable_category_ids || []);
       buildOptCategoryCheckboxes(opt.applicable_category_ids || []);
-      if (catSection) catSection.style.display = isCustom ? 'block' : 'none';
+      if (catSection) catSection.style.display = isMultiCustom ? 'block' : 'none';
     } else {
       dom.optionalModalTitle.textContent = 'Novo Adicional';
       dom.editOptId.value = '';
       dom.editOptName.value = '';
       dom.editOptPrice.value = '4.00';
       dom.editOptActive.value = 'true';
-      dom.editOptTarget.value = 'all';
+      populateOptTargetSelect('all', []);
       buildOptCategoryCheckboxes([]);
       if (catSection) catSection.style.display = 'none';
     }
@@ -3612,7 +3637,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dom.editOptTarget) {
     dom.editOptTarget.addEventListener('change', () => {
       const catSection = document.getElementById('optCategoriesCheckboxesSection');
-      if (catSection) catSection.style.display = dom.editOptTarget.value === 'custom' ? 'block' : 'none';
+      const isCustom = dom.editOptTarget.value === 'custom';
+      if (catSection) catSection.style.display = isCustom ? 'block' : 'none';
+      if (!isCustom && dom.editOptTarget.value !== 'all') {
+        // Se escolheu uma categoria específica, marca ela no checkbox
+        document.querySelectorAll('input[name="optCatApplicability"]').forEach(cb => {
+          cb.checked = (cb.value === dom.editOptTarget.value);
+        });
+      }
     });
   }
 
@@ -3639,11 +3671,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const name = dom.editOptName.value.trim();
       const price = Number(dom.editOptPrice.value) || 0;
       const is_active = dom.editOptActive.value === 'true';
-      const target = dom.editOptTarget ? dom.editOptTarget.value : 'all';
+      const selectedVal = dom.editOptTarget ? dom.editOptTarget.value : 'all';
 
-      // Coleta categorias selecionadas
-      const checkedCats = Array.from(document.querySelectorAll('input[name="optCatApplicability"]:checked'));
-      const applicable_category_ids = target === 'custom' ? checkedCats.map(cb => cb.value) : [];
+      let target = 'all';
+      let applicable_category_ids = [];
+
+      if (selectedVal === 'all') {
+        target = 'all';
+        applicable_category_ids = [];
+      } else if (selectedVal === 'custom') {
+        target = 'custom';
+        const checkedCats = Array.from(document.querySelectorAll('input[name="optCatApplicability"]:checked'));
+        applicable_category_ids = checkedCats.map(cb => cb.value);
+      } else {
+        // Categoria individual selecionada diretamente no select
+        target = 'custom';
+        applicable_category_ids = [selectedVal];
+      }
 
       if (!name) return;
       const payload = { name, price, is_active, target, applicable_category_ids };
