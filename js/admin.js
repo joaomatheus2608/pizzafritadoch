@@ -1272,36 +1272,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let optHtml = '';
-    const isBrasa = isProductNaBrasa(product);
-    const isChapa = isProductNaChapa(product);
-    const isBurguerItem = isBrasa || isChapa;
-    const productCategoryId = product.category_id || '';
+    const productCategoryId = String(product.category_id || '').trim();
 
     const activeOptionals = (adminState.optionals || []).filter(opt => {
       if (opt.is_active === false) return false;
-      const optName = (opt.name || '').toLowerCase();
-      const target = (opt.target || 'all').toLowerCase();
+      const target = String(opt.target || 'all').toLowerCase().trim();
+      const applicableCats = Array.isArray(opt.applicable_category_ids)
+        ? opt.applicable_category_ids.map(String)
+        : [];
 
-      // 1. Verificação por categoria específica personalizada
-      if (target === 'custom' && Array.isArray(opt.applicable_category_ids) && opt.applicable_category_ids.length > 0) {
-        return opt.applicable_category_ids.includes(productCategoryId);
-      }
-      
-      // 2. Exibe para todas as categorias
-      if (target === 'all_categories') return true;
-
-      // 3. Específico de Brasa
-      if (target === 'brasa' || optName.includes('brasa')) {
-        return isBrasa;
+      // 1. Se configurado para categorias específicas
+      if (target === 'custom' || applicableCats.length > 0) {
+        if (applicableCats.length > 0) {
+          return applicableCats.includes(productCategoryId);
+        }
       }
 
-      // 4. Específico de Chapa
-      if (target === 'chapa' || optName.includes('chapa')) {
-        return isChapa;
-      }
-
-      // 5. Adicionais gerais de Hambúrguer (target 'all' ou padrão)
-      return isBurguerItem;
+      // 2. Se for para todas as categorias
+      return true;
     });
 
     if (!isCombo && activeOptionals.length > 0) {
@@ -2914,16 +2902,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (dom.editProdPromoLabel) dom.editProdPromoLabel.value = prod.promo_label || '';
       promoDayCheckboxes.forEach(cb => { cb.checked = promoDays.includes(String(cb.value)); });
 
-      // Configuração de Sabores e Seleção / Combos
-      const hasCustom = (prod.customization_type && prod.customization_type !== 'none') || (Array.isArray(prod.customization_options) && prod.customization_options.length > 0);
-      if (dom.editProdHasCustomization) dom.editProdHasCustomization.checked = Boolean(hasCustom);
-      if (dom.editProdCustomizationFields) dom.editProdCustomizationFields.style.display = hasCustom ? 'block' : 'none';
-      if (dom.editProdCustomType) dom.editProdCustomType.value = prod.customization_type || 'flavors';
-      if (dom.editProdCustomMaxQtyGroup) dom.editProdCustomMaxQtyGroup.style.display = (prod.customization_type === 'selection') ? 'block' : 'none';
-      if (dom.editProdCustomMaxQty) dom.editProdCustomMaxQty.value = prod.customization_max_qty || 1;
-      if (dom.editProdCustomLabel) dom.editProdCustomLabel.value = prod.customization_label || '';
-      if (dom.editProdCustomOptions) dom.editProdCustomOptions.value = Array.isArray(prod.customization_options) ? prod.customization_options.join('\n') : '';
-
       if (prod.image_url && dom.editProdImagePreviewWrap) {
         dom.editProdImagePreview.src = prod.image_url;
         dom.editProdFileName.textContent = 'Imagem atual cadastrada';
@@ -2955,14 +2933,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (dom.editProdPromoPrice) dom.editProdPromoPrice.value = '';
       if (dom.editProdPromoLabel) dom.editProdPromoLabel.value = '';
       promoDayCheckboxes.forEach(cb => { cb.checked = false; });
-
-      if (dom.editProdHasCustomization) dom.editProdHasCustomization.checked = false;
-      if (dom.editProdCustomizationFields) dom.editProdCustomizationFields.style.display = 'none';
-      if (dom.editProdCustomType) dom.editProdCustomType.value = 'flavors';
-      if (dom.editProdCustomMaxQtyGroup) dom.editProdCustomMaxQtyGroup.style.display = 'none';
-      if (dom.editProdCustomMaxQty) dom.editProdCustomMaxQty.value = '1';
-      if (dom.editProdCustomLabel) dom.editProdCustomLabel.value = '';
-      if (dom.editProdCustomOptions) dom.editProdCustomOptions.value = '';
 
       if (dom.editProdImagePreviewWrap) dom.editProdImagePreviewWrap.style.display = 'none';
     }
@@ -3000,21 +2970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (dom.editProdHasCustomization) {
-    dom.editProdHasCustomization.addEventListener('change', () => {
-      if (dom.editProdCustomizationFields) {
-        dom.editProdCustomizationFields.style.display = dom.editProdHasCustomization.checked ? 'block' : 'none';
-      }
-    });
-  }
 
-  if (dom.editProdCustomType) {
-    dom.editProdCustomType.addEventListener('change', () => {
-      if (dom.editProdCustomMaxQtyGroup) {
-        dom.editProdCustomMaxQtyGroup.style.display = dom.editProdCustomType.value === 'selection' ? 'block' : 'none';
-      }
-    });
-  }
 
   if (dom.editProdFileInput) {
     dom.editProdFileInput.addEventListener('change', async (e) => {
@@ -3096,12 +3052,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const rawPromoPrice = dom.editProdPromoPrice ? dom.editProdPromoPrice.value.trim() : '';
       const promoDaysChecked = Array.from(document.querySelectorAll('input[name="editProdPromoDay"]:checked')).map(cb => Number(cb.value));
 
-      const hasCustomization = dom.editProdHasCustomization ? dom.editProdHasCustomization.checked : false;
-      const customType = hasCustomization && dom.editProdCustomType ? dom.editProdCustomType.value : 'none';
-      const customMaxQty = hasCustomization && dom.editProdCustomMaxQty ? (Number(dom.editProdCustomMaxQty.value) || 1) : 1;
-      const customLabel = hasCustomization && dom.editProdCustomLabel ? dom.editProdCustomLabel.value.trim() : null;
-      const rawCustomOptions = hasCustomization && dom.editProdCustomOptions ? dom.editProdCustomOptions.value : '';
-      const customOptions = rawCustomOptions.split('\n').map(s => s.trim()).filter(Boolean);
       const burgerType = dom.editProdBurgerType ? dom.editProdBurgerType.value : 'none';
 
       const sizes = hasSizes ? [
@@ -3128,12 +3078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         promo_days: hasDayPromo ? promoDaysChecked : [],
         promo_price: (hasDayPromo && rawPromoPrice) ? Number(rawPromoPrice) : null,
         promo_label: (hasDayPromo && dom.editProdPromoLabel) ? dom.editProdPromoLabel.value.trim() : null,
-        monday_price: (hasDayPromo && promoDaysChecked.includes(1) && rawPromoPrice) ? Number(rawPromoPrice) : null,
-        customization_type: customType,
-        customization_label: customLabel,
-        customization_max_qty: customMaxQty,
-        customization_min_qty: 1,
-        customization_options: customOptions
+        monday_price: (hasDayPromo && promoDaysChecked.includes(1) && rawPromoPrice) ? Number(rawPromoPrice) : null
       };
       if (id) payload.id = id;
 
@@ -3566,14 +3511,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderOptionals() {
     let html = '';
     adminState.optionals.forEach(o => {
-      const optName = (o.name || '').toLowerCase();
-      const target = o.target || (optName.includes('brasa') ? 'brasa' : optName.includes('chapa') ? 'chapa' : 'all');
+      const target = o.target || 'all';
+      const applicableCats = Array.isArray(o.applicable_category_ids) ? o.applicable_category_ids : [];
       
-      let targetBadge = '<span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">Todos (Geral)</span>';
-      if (target === 'brasa') {
-        targetBadge = '<span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #fee2e2; color: #b91c1c;">🔥 Na Brasa</span>';
-      } else if (target === 'chapa') {
-        targetBadge = '<span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #b45309;">🍳 Na Chapa</span>';
+      let targetBadge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">Todas as Categorias</span>';
+      
+      if (target === 'custom' && applicableCats.length > 0) {
+        const catNames = applicableCats.map(catId => {
+          const foundCat = adminState.categories.find(c => String(c.id) === String(catId));
+          return foundCat ? foundCat.name : catId;
+        });
+        targetBadge = `<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fef3c7; color: #b45309;">${window.escapeHtml(catNames.join(', '))}</span>`;
       }
 
       html += `
@@ -3624,10 +3572,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('optCategoriesCheckboxes');
     if (!container) return;
     const selected = Array.isArray(selectedIds) ? selectedIds.map(String) : [];
-    container.innerHTML = adminState.categories.map(cat => `
-      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.83rem; cursor: pointer;">
-        <input type="checkbox" name="optCatApplicability" value="${cat.id}" ${selected.includes(String(cat.id)) ? 'checked' : ''} style="accent-color: #d97706;" />
-        ${window.escapeHtml(cat.name)}
+    container.innerHTML = (adminState.categories || []).map(cat => `
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; cursor: pointer;">
+        <input type="checkbox" name="optCatApplicability" value="${cat.id}" ${selected.includes(String(cat.id)) ? 'checked' : ''} style="accent-color: #d97706; transform: scale(1.15);" />
+        <span style="font-weight: 600; color: #1e293b;">${window.escapeHtml(cat.name)}</span>
       </label>
     `).join('');
   }
@@ -3643,16 +3591,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       dom.editOptName.value = opt.name || '';
       dom.editOptPrice.value = opt.price !== undefined && opt.price !== null ? opt.price : '3.00';
       dom.editOptActive.value = String(opt.is_active !== false);
-      const optName = (opt.name || '').toLowerCase();
-      const savedTarget = opt.target || (optName.includes('brasa') ? 'brasa' : optName.includes('chapa') ? 'chapa' : 'all');
-      dom.editOptTarget.value = savedTarget;
+      const isCustom = opt.target === 'custom' || (Array.isArray(opt.applicable_category_ids) && opt.applicable_category_ids.length > 0);
+      dom.editOptTarget.value = isCustom ? 'custom' : 'all';
       buildOptCategoryCheckboxes(opt.applicable_category_ids || []);
-      if (catSection) catSection.style.display = savedTarget === 'custom' ? 'block' : 'none';
+      if (catSection) catSection.style.display = isCustom ? 'block' : 'none';
     } else {
       dom.optionalModalTitle.textContent = 'Novo Adicional';
       dom.editOptId.value = '';
       dom.editOptName.value = '';
-      dom.editOptPrice.value = '3.00';
+      dom.editOptPrice.value = '4.00';
       dom.editOptActive.value = 'true';
       dom.editOptTarget.value = 'all';
       buildOptCategoryCheckboxes([]);
@@ -3666,6 +3613,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     dom.editOptTarget.addEventListener('change', () => {
       const catSection = document.getElementById('optCategoriesCheckboxesSection');
       if (catSection) catSection.style.display = dom.editOptTarget.value === 'custom' ? 'block' : 'none';
+    });
+  }
+
+  const btnSelectAll = document.getElementById('btnSelectAllOptCats');
+  if (btnSelectAll) {
+    btnSelectAll.addEventListener('click', () => {
+      document.querySelectorAll('input[name="optCatApplicability"]').forEach(cb => cb.checked = true);
+    });
+  }
+  const btnClearAll = document.getElementById('btnClearAllOptCats');
+  if (btnClearAll) {
+    btnClearAll.addEventListener('click', () => {
+      document.querySelectorAll('input[name="optCatApplicability"]').forEach(cb => cb.checked = false);
     });
   }
 
@@ -3683,7 +3643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Coleta categorias selecionadas
       const checkedCats = Array.from(document.querySelectorAll('input[name="optCatApplicability"]:checked'));
-      const applicable_category_ids = checkedCats.map(cb => cb.value);
+      const applicable_category_ids = target === 'custom' ? checkedCats.map(cb => cb.value) : [];
 
       if (!name) return;
       const payload = { name, price, is_active, target, applicable_category_ids };

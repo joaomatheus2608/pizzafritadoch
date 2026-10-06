@@ -1037,40 +1037,6 @@
             </div>
           </div>
 
-          <!-- Seleção de Sabores / Combos Personalizados -->
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin-top: 14px; margin-bottom: 14px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-              <label style="font-weight: 800; font-size: 0.9rem; color: #166534; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="editProdHasCustomization" />
-                <span>🥤 / 🍔 Opções de Sabores ou Seleção de Itens (Combos)</span>
-              </label>
-            </div>
-            <div id="editProdCustomizationFields" style="display: none;">
-              <div class="form-cols-2">
-                <div class="form-field-group">
-                  <label class="form-field-label">Tipo de Escolha *</label>
-                  <select id="editProdCustomType" class="form-text-input">
-                    <option value="flavors">Sabores (Escolha Única - ex: Graviola, Cajá, Maracujá)</option>
-                    <option value="selection">Seleção / Combo (Múltipla Escolha com limite - ex: 3 Hambúrgueres)</option>
-                  </select>
-                </div>
-                <div class="form-field-group" id="editProdCustomMaxQtyGroup" style="display: none;">
-                  <label class="form-field-label">Quantidade Máxima de Escolhas *</label>
-                  <input type="number" id="editProdCustomMaxQty" class="form-text-input" placeholder="Ex: 3" value="1" min="1" />
-                </div>
-              </div>
-              <div class="form-field-group">
-                <label class="form-field-label">Título da Escolha (Opcional)</label>
-                <input type="text" id="editProdCustomLabel" class="form-text-input" placeholder="Ex: Escolha o sabor do suco ou Escolha seus 3 hambúrgueres" />
-              </div>
-              <div class="form-field-group" style="margin-bottom: 0;">
-                <label class="form-field-label">Opções Disponíveis (1 opção por linha) *</label>
-                <textarea id="editProdCustomOptions" class="notes-input-box" rows="5" placeholder="Exemplo:&#10;Graviola&#10;Cajá&#10;Maracujá&#10;Acerola&#10;Goiaba"></textarea>
-                <span style="font-size: 0.73rem; color: #166534; margin-top: 4px; display: block;">Digite cada sabor ou lanche em uma linha separada. O sistema criará os seletores automaticamente no PDV, Mesas e Cardápio, e imprimirá com destaque para a cozinha.</span>
-              </div>
-            </div>
-          </div>
-
           <div style="display: flex; gap: 10px; margin-top: 18px;">
             <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Produto</button>
             <button type="button" id="btnProductEditCancel" class="btn-ghost-secondary">Cancelar</button>
@@ -1094,7 +1060,7 @@
           <input type="hidden" id="editCatId" />
           <div class="form-field-group">
             <label class="form-field-label">Nome da Categoria *</label>
-            <input type="text" id="editCatName" class="form-text-input" placeholder="Ex: Hambúrgueres Artesanais" required />
+            <input type="text" id="editCatName" class="form-text-input" placeholder="Ex: Sabores Salgados, Bebidas..." required />
           </div>
           <div class="form-cols-2">
             <div class="form-field-group">
@@ -1132,7 +1098,7 @@
           <input type="hidden" id="editOptId" />
           <div class="form-field-group">
             <label class="form-field-label">Nome do Adicional *</label>
-            <input type="text" id="editOptName" class="form-text-input" placeholder="Ex: Queijo Coalho Extra" required />
+            <input type="text" id="editOptName" class="form-text-input" placeholder="Ex: Adicional Cream Cheese, Bacon Crocante..." required />
           </div>
           <div class="form-cols-2">
             <div class="form-field-group">
@@ -1147,22 +1113,28 @@
               </select>
             </div>
           </div>
+
           <div class="form-field-group">
-            <label class="form-field-label">Aplicabilidade do Adicional</label>
+            <label class="form-field-label">Em quais categorias este adicional pode ser colocado? *</label>
             <select id="editOptTarget" class="form-text-input">
-              <option value="all">Todos os Hambúrgueres (Chapa & Brasa)</option>
-              <option value="brasa">Apenas Hambúrgueres na Brasa</option>
-              <option value="chapa">Apenas Hambúrgueres na Chapa</option>
-              <option value="all_categories">Todas as Categorias do Cardápio</option>
-              <option value="custom">Categorias Específicas (Marcar abaixo)...</option>
+              <option value="all">Todas as Categorias do Cardápio</option>
+              <option value="custom">Categorias Específicas (Selecionar abaixo)...</option>
             </select>
           </div>
-          <div id="optCategoriesCheckboxesSection" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 14px;">
-            <label class="form-field-label" style="margin-bottom: 6px;">Exibir este adicional nas categorias:</label>
-            <div id="optCategoriesCheckboxes" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;">
-              <!-- Checkboxes de categorias geradas via JS -->
+          
+          <div id="optCategoriesCheckboxesSection" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-field-label" style="margin-bottom: 0; font-weight: 700; font-size: 0.84rem;">Marque as categorias permitidas:</label>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" id="btnSelectAllOptCats" class="btn-ghost-secondary" style="font-size: 0.72rem; padding: 2px 8px; cursor: pointer;">Marcar Todas</button>
+                <button type="button" id="btnClearAllOptCats" class="btn-ghost-secondary" style="font-size: 0.72rem; padding: 2px 8px; cursor: pointer;">Limpar</button>
+              </div>
+            </div>
+            <div id="optCategoriesCheckboxes" style="display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
+              <!-- Checkboxes de categorias geradas dinamicamente via JS -->
             </div>
           </div>
+
           <div style="display: flex; gap: 10px; margin-top: 18px;">
             <button type="submit" class="btn-submit-order" style="flex: 1;">Salvar Adicional</button>
             <button type="button" id="btnOptionalModalCancel" class="btn-ghost-secondary">Cancelar</button>

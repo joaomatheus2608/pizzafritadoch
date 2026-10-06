@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS public.optionals (
     name TEXT NOT NULL,
     price NUMERIC(10,2) DEFAULT 0.00,
     is_active BOOLEAN DEFAULT true,
+    target TEXT DEFAULT 'all',
+    applicable_category_ids JSONB DEFAULT '[]'::jsonb,
     order_index INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
 );

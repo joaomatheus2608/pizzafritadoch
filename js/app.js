@@ -367,37 +367,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function getFilteredOptionalsForProduct(product) {
     if (!product) return [];
-    const isBrasa = isProductNaBrasa(product);
-    const isChapa = isProductNaChapa(product);
-    const isBurguer = isBrasa || isChapa;
-    const productCategoryId = product.category_id || '';
+    const productCategoryId = String(product.category_id || '').trim();
 
-    return state.optionals.filter(opt => {
+    return (state.optionals || []).filter(opt => {
       if (opt.is_active === false) return false;
-      const optName = (opt.name || '').toLowerCase();
-      const target = (opt.target || 'all').toLowerCase();
 
-      // 1. Adicional com categorias personalizadas
-      if (target === 'custom' && Array.isArray(opt.applicable_category_ids) && opt.applicable_category_ids.length > 0) {
-        return opt.applicable_category_ids.includes(productCategoryId);
+      const target = String(opt.target || 'all').toLowerCase().trim();
+      const applicableCats = Array.isArray(opt.applicable_category_ids)
+        ? opt.applicable_category_ids.map(String)
+        : [];
+
+      // 1. Se configurado para categorias específicas
+      if (target === 'custom' || applicableCats.length > 0) {
+        if (applicableCats.length > 0) {
+          return applicableCats.includes(productCategoryId);
+        }
       }
 
-      // 2. Exibe para todas as categorias sem exceção
-      if (target === 'all_categories') return true;
-
-      // 3. Adicional específico de Brasa
-      if (target === 'brasa' || optName.includes('brasa')) {
-        return isBrasa;
-      }
-
-      // 4. Adicional específico de Chapa
-      if (target === 'chapa' || optName.includes('chapa')) {
-        return isChapa;
-      }
-
-      // 5. Adicionais de Hambúrguer gerais (target 'all' ou padrão):
-      // NUNCA exibe em bebidas, acompanhamentos ou itens que não sejam hambúrguer
-      return isBurguer;
+      // 2. Se configurado para todas as categorias
+      return true;
     });
   }
 
@@ -747,25 +735,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Renderiza tamanhos (P, M, G)
     renderPizzaSizes(product);
 
-    // Seção de Sabores Únicos (ex: Bebidas)
-    const hasCustomConfig = Array.isArray(product.customization_options) && product.customization_options.length > 0;
-    if (hasCustomConfig && dom.productModalFlavorSection) {
-      dom.productModalFlavorSection.style.display = 'block';
-      renderFlavorsList(product.customization_options, product.customization_label || 'Escolha a Opção');
-    } else if (dom.productModalFlavorSection) {
-      dom.productModalFlavorSection.style.display = 'none';
-    }
-
-    if (dom.productModalComboSection) {
-      dom.productModalComboSection.style.display = 'none';
-    }
-
-    // Adicionais filtrados
+    // Adicionais filtrados por categoria
     const filteredOptionals = getFilteredOptionalsForProduct(product);
-    if (filteredOptionals.length > 0) {
+    if (filteredOptionals.length > 0 && dom.productModalOptionalsSection) {
       dom.productModalOptionalsSection.style.display = 'block';
       renderOptionalsList(product);
-    } else {
+    } else if (dom.productModalOptionalsSection) {
       dom.productModalOptionalsSection.style.display = 'none';
       state.modalSelectedOptionals = [];
     }
@@ -1497,15 +1472,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       dom.btnModalAddToCart.addEventListener('click', () => {
         if (!state.currentModalProduct) return;
 
-        const hasCustomConfig = Array.isArray(state.currentModalProduct.customization_options) && state.currentModalProduct.customization_options.length > 0;
-        const isExplicitFlavor = state.currentModalProduct.customization_type === 'flavors';
-        const isFlavor = isExplicitFlavor || (hasCustomConfig && (state.currentModalProduct.customization_max_qty === 1 || !state.currentModalProduct.customization_max_qty));
-
-        if (isFlavor && hasCustomConfig && !state.modalSelectedFlavor) {
-          alert('Por favor, selecione uma opção antes de adicionar.');
-          return;
-        }
-
         let effectivePrice = getProductEffectivePrice(state.currentModalProduct);
         if (state.modalSelectedSize && state.modalSelectedSize.price) {
           effectivePrice = Number(state.modalSelectedSize.price);
@@ -1522,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           state.modalSelectedOptionals,
           notes,
           [],
-          isFlavor ? state.modalSelectedFlavor : '',
+          '',
           state.modalSelectedSize
         );
 

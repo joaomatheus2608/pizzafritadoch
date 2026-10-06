@@ -37,11 +37,11 @@ const INITIAL_CATEGORIES = [
 ];
 
 const INITIAL_OPTIONALS = [
-  { id: 'opt-cream-cheese', name: 'Adicional Cream Cheese', price: 5.00, is_active: true, order_index: 1 },
-  { id: 'opt-cheddar', name: 'Adicional Cheddar', price: 4.00, is_active: true, order_index: 2 },
-  { id: 'opt-bacon', name: 'Adicional Bacon Crocante', price: 4.00, is_active: true, order_index: 3 },
-  { id: 'opt-queijo', name: 'Adicional Mussarela', price: 4.00, is_active: true, order_index: 4 },
-  { id: 'opt-ovo', name: 'Adicional Ovo Cozido', price: 2.00, is_active: true, order_index: 5 }
+  { id: 'opt-cream-cheese', name: 'Adicional Cream Cheese', price: 5.00, is_active: true, target: 'all', applicable_category_ids: [], order_index: 1 },
+  { id: 'opt-cheddar', name: 'Adicional Cheddar', price: 4.00, is_active: true, target: 'all', applicable_category_ids: [], order_index: 2 },
+  { id: 'opt-bacon', name: 'Adicional Bacon Crocante', price: 4.00, is_active: true, target: 'all', applicable_category_ids: [], order_index: 3 },
+  { id: 'opt-queijo', name: 'Adicional Mussarela', price: 4.00, is_active: true, target: 'all', applicable_category_ids: [], order_index: 4 },
+  { id: 'opt-ovo', name: 'Adicional Ovo Cozido', price: 2.00, is_active: true, target: 'all', applicable_category_ids: [], order_index: 5 }
 ];
 
 const INITIAL_PROMOTIONS = [];

@@ -387,24 +387,32 @@ exports.handler = async function(event) {
       let data;
       const isExistingUuid = opt.id && /^[0-9a-f-]{36}$/i.test(opt.id);
 
+      const cleanPayload = {
+        name: String(opt.name || '').trim(),
+        price: Number(opt.price) || 0,
+        is_active: opt.is_active !== false,
+        order_index: Number(opt.order_index) || 0,
+        target: opt.target ? String(opt.target).trim() : 'all',
+        applicable_category_ids: Array.isArray(opt.applicable_category_ids) ? opt.applicable_category_ids : []
+      };
+
       try {
         if (isExistingUuid) {
           data = await supabaseFetch(`/optionals?id=eq.${opt.id}`, {
-            method: 'PATCH', body: JSON.stringify(opt)
+            method: 'PATCH', body: JSON.stringify(cleanPayload)
           });
         } else {
-          const { id, ...payload } = opt;
           data = await supabaseFetch('/optionals', {
-            method: 'POST', body: JSON.stringify(payload)
+            method: 'POST', body: JSON.stringify(opt.id ? { id: opt.id, ...cleanPayload } : cleanPayload)
           });
         }
       } catch (err) {
         console.warn('Falha ao salvar adicional completo no Supabase, tentando campos padrão:', err.message);
         const safePayload = {
-          name: opt.name,
-          price: opt.price,
-          is_active: opt.is_active !== false,
-          order_index: opt.order_index || 0
+          name: cleanPayload.name,
+          price: cleanPayload.price,
+          is_active: cleanPayload.is_active,
+          order_index: cleanPayload.order_index
         };
         if (isExistingUuid) {
           data = await supabaseFetch(`/optionals?id=eq.${opt.id}`, {
@@ -412,11 +420,12 @@ exports.handler = async function(event) {
           });
         } else {
           data = await supabaseFetch('/optionals', {
-            method: 'POST', body: JSON.stringify(safePayload)
+            method: 'POST', body: JSON.stringify(opt.id ? { id: opt.id, ...safePayload } : safePayload)
           });
         }
       }
-      return respond(200, { data: Array.isArray(data) ? data[0] : data });
+      const finalData = Array.isArray(data) ? data[0] : (data || cleanPayload);
+      return respond(200, { data: { ...cleanPayload, ...finalData, id: finalData?.id || opt.id } });
     }
 
     // -------------------------------------------------------
