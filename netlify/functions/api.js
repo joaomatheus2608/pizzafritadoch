@@ -497,15 +497,23 @@ exports.handler = async function(event) {
     if (method === 'POST' && path === 'create-order') {
       const { items, ...orderData } = body;
 
+      // Garante ID único válido para compatibilidade total (UUID / TEXT)
+      let orderId = orderData.id;
+      if (!orderId || typeof orderId !== 'string' || orderId.trim().length === 0) {
+        orderId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+      } else {
+        orderId = orderId.trim();
+      }
+
       // Obtém o maior order_number atual no banco para gerar o próximo sequencial único
-      let nextOrderNumber = 1;
+      let nextOrderNumber = 1001;
       try {
         const lastOrders = await supabaseFetch('/orders?select=order_number&order=order_number.desc&limit=1');
         const maxOrderNumber = (Array.isArray(lastOrders) && lastOrders[0]?.order_number) ? Number(lastOrders[0].order_number) : 0;
-        nextOrderNumber = maxOrderNumber + 1;
+        nextOrderNumber = maxOrderNumber > 0 ? (maxOrderNumber + 1) : 1001;
       } catch (e) {
         console.warn('Erro ao consultar maior order_number:', e);
-        nextOrderNumber = Number(orderData.order_number) || Math.floor(Date.now() / 1000) % 10000;
+        nextOrderNumber = Number(orderData.order_number) || 1001;
       }
 
       // Normaliza payment_method para atender ao check constraint do PostgreSQL
@@ -532,23 +540,26 @@ exports.handler = async function(event) {
       const addr = orderData.delivery_address || {};
 
       // Constrói payload limpo e seguro para a tabela orders
+      const orderItemsList = Array.isArray(items) ? items : (Array.isArray(orderData.items) ? orderData.items : []);
       const cleanOrderPayload = {
+        id: orderId,
         order_number: nextOrderNumber,
         customer_name: String(orderData.customer_name || 'Cliente').trim(),
         customer_phone: String(orderData.customer_phone || '').trim(),
         order_type: orderType,
         status: orderData.status || 'novo',
-        delivery_address: orderData.delivery_address || null,
+        delivery_address: orderData.delivery_address || (addr.street ? { street: addr.street, number: addr.number, neighborhood: addr.neighborhood, complement: addr.complement, reference: addr.reference } : null),
         address_street: addr.street || orderData.address_street || null,
         address_number: addr.number || orderData.address_number || null,
         address_neighborhood: addr.neighborhood || orderData.address_neighborhood || null,
         address_complement: addr.complement || orderData.address_complement || null,
         address_reference: addr.reference || orderData.address_reference || null,
-        items: Array.isArray(items) ? items : (Array.isArray(orderData.items) ? orderData.items : []),
+        items: orderItemsList,
         payment_method: paymentMethod,
         change_for: (orderData.change_for !== null && orderData.change_for !== undefined && orderData.change_for !== '') ? Number(orderData.change_for) : null,
         subtotal: Number(orderData.subtotal) || 0,
         delivery_fee: Number(orderData.delivery_fee) || 0,
+        discount: Number(orderData.discount) || 0,
         total: Number(orderData.total) || 0,
         notes: orderData.notes ? String(orderData.notes).trim() : null,
         table_number: (orderData.table_number !== null && orderData.table_number !== undefined && orderData.table_number !== '') ? Number(orderData.table_number) : null,
@@ -557,9 +568,9 @@ exports.handler = async function(event) {
         updated_at: new Date().toISOString()
       };
 
-      // Só envia user_id se for um UUID válido de 36 caracteres (evita erro de sintaxe UUID no PostgreSQL)
-      if (orderData.user_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderData.user_id)) {
-        cleanOrderPayload.user_id = orderData.user_id;
+      // Só envia user_id se for um UUID ou string válida
+      if (orderData.user_id && typeof orderData.user_id === 'string' && orderData.user_id.trim()) {
+        cleanOrderPayload.user_id = orderData.user_id.trim();
       }
 
       let insertedOrders;
@@ -570,7 +581,6 @@ exports.handler = async function(event) {
         });
       } catch (err) {
         console.warn('Erro ao inserir pedido com payload completo, tentando com fallback:', err.message);
-        // Em caso de colisão de order_number ou outro detalhe, recalcula
         cleanOrderPayload.order_number = nextOrderNumber + Math.floor(Math.random() * 10) + 1;
         insertedOrders = await supabaseFetch('/orders', {
           method: 'POST',
@@ -578,40 +588,12 @@ exports.handler = async function(event) {
         });
       }
 
-      const insertedOrder = Array.isArray(insertedOrders) ? insertedOrders[0] : insertedOrders;
-
-      if (insertedOrder?.id && items?.length > 0) {
-        try {
-          const orderItems = items.map(item => ({
-            order_id: insertedOrder.id,
-            product_id: /^[0-9a-f-]{36}$/i.test(item.id) ? item.id : null,
-            product_name: item.name || item.product_name,
-            unit_price: Number(item.price || item.unit_price) || 0,
-            quantity: Number(item.quantity) || 1,
-            subtotal: Number(item.subtotal) || ((Number(item.price || item.unit_price) || 0) * (Number(item.quantity) || 1)),
-            optionals: item.optionals || [],
-            notes: item.notes || '',
-            is_combo: Boolean(item.is_combo),
-            combo_choices: item.combo_choices || []
-          }));
-          const insertedItems = await supabaseFetch('/order_items', {
-            method: 'POST', body: JSON.stringify(orderItems)
-          });
-          insertedOrder.items = insertedItems || [];
-          insertedOrder.order_items = insertedOrder.items;
-        } catch (itemErr) {
-          console.warn('Falha ao salvar itens detalhados do pedido, tentando itens simplificados:', itemErr.message);
-          try {
-            const simpleItems = items.map(item => ({
-              order_id: insertedOrder.id,
-              product_name: item.name || item.product_name || 'Item',
-              unit_price: Number(item.price || item.unit_price) || 0,
-              quantity: Number(item.quantity) || 1,
-              subtotal: Number(item.subtotal) || 0
-            }));
-            await supabaseFetch('/order_items', { method: 'POST', body: JSON.stringify(simpleItems) });
-          } catch {}
-        }
+      let insertedOrder = Array.isArray(insertedOrders) ? insertedOrders[0] : (insertedOrders || cleanOrderPayload);
+      if (!insertedOrder || typeof insertedOrder !== 'object') {
+        insertedOrder = { ...cleanOrderPayload };
+      }
+      if (!insertedOrder.items || !Array.isArray(insertedOrder.items) || insertedOrder.items.length === 0) {
+        insertedOrder.items = cleanOrderPayload.items;
       }
 
       return respond(200, { data: insertedOrder });
@@ -632,18 +614,33 @@ exports.handler = async function(event) {
     }
 
     // -------------------------------------------------------
-    // DELETE ORDERS (limpeza)
+    // DELETE ORDERS (limpeza de pedidos)
     // -------------------------------------------------------
-    if (method === 'DELETE' && path === 'delete-orders') {
+    if ((method === 'DELETE' || method === 'POST') && path === 'delete-orders') {
       const { ids } = body;
-      if (ids && ids.length > 0) {
-        // Deleta itens dos pedidos primeiro
-        await supabaseFetch(`/order_items?order_id=in.(${ids.join(',')})`, { method: 'DELETE' });
-        await supabaseFetch(`/orders?id=in.(${ids.join(',')})`, { method: 'DELETE' });
+      if (ids && Array.isArray(ids) && ids.length > 0) {
+        try {
+          await supabaseFetch(`/order_items?order_id=in.(${ids.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
+        } catch {}
+        try {
+          await supabaseFetch(`/orders?id=in.(${ids.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
+        } catch (e) {
+          console.warn('Erro ao deletar pedidos específicos:', e.message);
+        }
       } else {
-        // Deleta todos
-        await supabaseFetch('/order_items?id=neq.00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
-        await supabaseFetch('/orders?id=neq.00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+        // Deleta todos os pedidos
+        try {
+          await supabaseFetch('/order_items?id=not.is.null', { method: 'DELETE' });
+        } catch {}
+        try {
+          await supabaseFetch('/orders?id=not.is.null', { method: 'DELETE' });
+        } catch (e1) {
+          try {
+            await supabaseFetch('/orders?order_number=gt.0', { method: 'DELETE' });
+          } catch (e2) {
+            console.warn('Erro ao deletar todos os pedidos no Supabase:', e2.message);
+          }
+        }
       }
       return respond(200, { success: true });
     }

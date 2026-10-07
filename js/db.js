@@ -504,7 +504,7 @@
         const res = await fetch('/.netlify/functions/api?action=get-orders');
         if (res.ok) {
           const json = await res.json();
-          if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          if (json?.data && Array.isArray(json.data)) {
             setStored(STORAGE_KEYS.ORDERS, json.data);
             return json.data;
           }
@@ -525,9 +525,11 @@
       const complement = addr.complement || orderPayload.address_complement || '';
       const reference = addr.reference || orderPayload.address_reference || '';
 
+      const generatedId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+
       const newOrder = {
         ...orderPayload,
-        id: orderPayload.id || generateId('ord'),
+        id: orderPayload.id || generatedId,
         order_number: Number(orderPayload.order_number) || nextNum,
         address_street: street,
         address_number: number,
@@ -559,6 +561,9 @@
             if (idx >= 0) list[idx] = newOrder;
             setStored(STORAGE_KEYS.ORDERS, list);
           }
+        } else {
+          const errJson = await res.json().catch(() => ({}));
+          console.error('Falha ao registrar pedido na nuvem:', errJson);
         }
       } catch (e) {
         console.warn('Erro ao criar pedido via API:', e);
@@ -601,6 +606,48 @@
       } catch {}
 
       return order;
+    },
+
+    async deleteOrder(orderId) {
+      let list = getStored(STORAGE_KEYS.ORDERS, []);
+      list = list.filter(o => o.id !== orderId);
+      setStored(STORAGE_KEYS.ORDERS, list);
+
+      try {
+        await fetch('/.netlify/functions/api?action=delete-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: [orderId] })
+        });
+      } catch (e) {
+        console.warn('Erro ao excluir pedido via API:', e);
+      }
+
+      try {
+        localStorage.setItem('pizzafrita_orders_ping', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('pizzafrita_order_change', { detail: { id: orderId, deleted: true } }));
+      } catch {}
+      return true;
+    },
+
+    async clearAllOrders() {
+      setStored(STORAGE_KEYS.ORDERS, []);
+
+      try {
+        await fetch('/.netlify/functions/api?action=delete-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+      } catch (e) {
+        console.warn('Erro ao limpar pedidos via API:', e);
+      }
+
+      try {
+        localStorage.setItem('pizzafrita_orders_ping', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('pizzafrita_order_change', { detail: { cleared: true } }));
+      } catch {}
+      return true;
     },
 
     // ----------------------------------------

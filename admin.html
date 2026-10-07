@@ -167,10 +167,18 @@
       <section id="tab-orders" class="admin-tab-content" style="display: none;">
         <div class="admin-card-container">
           <div class="admin-card-header">
-            <h3>Gestão de Pedidos Recebidos</h3>
-            <button id="btnRefreshOrders" class="btn-ghost-secondary" style="font-size: 0.85rem;">
-              <i class="fi fi-sr-refresh"></i> Atualizar
-            </button>
+            <div>
+              <h3 style="margin-bottom: 2px;">Gestão de Pedidos Recebidos</h3>
+              <span style="font-size: 0.82rem; color: #64748b;">Acompanhamento em tempo real, despacho de entregadores e impressão</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btnClearAllOrders" class="btn-ghost-secondary" style="font-size: 0.85rem; color: #ef4444; border-color: #fca5a5;" title="Apagar todos os pedidos de teste">
+                <i class="fi fi-sr-trash"></i> Limpar Pedidos de Teste
+              </button>
+              <button id="btnRefreshOrders" class="btn-ghost-secondary" style="font-size: 0.85rem;">
+                <i class="fi fi-sr-refresh"></i> Atualizar
+              </button>
+            </div>
           </div>
 
           <!-- Filtros de Status -->

@@ -213,6 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Pedidos
     btnRefreshOrders: document.getElementById('btnRefreshOrders'),
+    btnClearAllOrders: document.getElementById('btnClearAllOrders'),
     orderFilterChips: document.querySelectorAll('.filter-chip'),
     ordersListContainer: document.getElementById('ordersListContainer'),
 
@@ -2075,6 +2076,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               <button class="btn-ghost-secondary btn-print-balcao" data-order-id="${order.id}" style="font-size: 0.8rem; border-color: #8b5cf6; color: #7c3aed;">
                 <i class="fi fi-sr-receipt"></i> Balcão
               </button>` : ''}
+              <button type="button" class="btn-ghost-secondary btn-delete-order" data-order-id="${order.id}" style="font-size: 0.8rem; color: #ef4444; border-color: #fca5a5;" title="Excluir este pedido">
+                <i class="fi fi-sr-trash"></i> Excluir
+              </button>
             </div>
           </div>
         </div>
@@ -2082,6 +2086,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     dom.ordersListContainer.innerHTML = html;
+
+    dom.ordersListContainer.querySelectorAll('.btn-delete-order').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const orderId = btn.getAttribute('data-order-id');
+        const order = adminState.orders.find(o => o.id === orderId);
+        const orderNum = order ? `#${String(order.order_number || '').padStart(4, '0')}` : '';
+        if (!confirm(`Deseja realmente excluir o pedido ${orderNum}?`)) return;
+        
+        await window.db.deleteOrder(orderId);
+        adminState.orders = adminState.orders.filter(o => o.id !== orderId);
+        renderSalonTables();
+        renderOrders();
+        renderDashboard();
+        renderCashReport();
+      });
+    });
 
     dom.ordersListContainer.querySelectorAll('.order-status-select').forEach(select => {
       select.addEventListener('change', async (e) => {
@@ -5007,13 +5027,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  dom.btnRefreshOrders.addEventListener('click', async () => {
-    adminState.orders = await window.db.getOrders();
-    renderSalonTables();
-    renderOrders();
-    renderDashboard();
-    renderCashReport();
-  });
+  if (dom.btnRefreshOrders) {
+    dom.btnRefreshOrders.addEventListener('click', async () => {
+      adminState.orders = await window.db.getOrders();
+      renderSalonTables();
+      renderOrders();
+      renderDashboard();
+      renderCashReport();
+    });
+  }
+
+  if (dom.btnClearAllOrders) {
+    dom.btnClearAllOrders.addEventListener('click', async () => {
+      if (!confirm('Deseja realmente apagar TODOS os pedidos de teste do sistema? Esta ação é irreversível.')) {
+        return;
+      }
+      dom.btnClearAllOrders.disabled = true;
+      dom.btnClearAllOrders.innerHTML = '<i class="fi fi-sr-refresh" style="animation: spin 1s linear infinite;"></i> Apagando...';
+      try {
+        await window.db.clearAllOrders();
+        adminState.orders = [];
+        renderSalonTables();
+        renderOrders();
+        renderDashboard();
+        renderCashReport();
+        alert('Todos os pedidos de teste foram apagados com sucesso!');
+      } catch (err) {
+        console.error('Erro ao apagar pedidos:', err);
+        alert('Erro ao apagar pedidos. Tente novamente.');
+      } finally {
+        dom.btnClearAllOrders.disabled = false;
+        dom.btnClearAllOrders.innerHTML = '<i class="fi fi-sr-trash"></i> Limpar Pedidos de Teste';
+      }
+    });
+  }
 
   // Filtros de busca de produtos
   dom.adminSearchProductInput.addEventListener('input', (e) => {
