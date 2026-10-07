@@ -107,8 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dom.btnShareRestaurant) {
     dom.btnShareRestaurant.addEventListener('click', async () => {
       const shareData = {
-        title: 'Hamburgueria Boy Degusta',
-        text: 'Confira o cardápio e faça seu pedido na Boy Degusta!',
+        title: 'Pizza Frita do CH',
+        text: 'Confira o cardápio e faça seu pedido na Pizza Frita do CH!',
         url: window.location.href
       };
       if (navigator.share) {
