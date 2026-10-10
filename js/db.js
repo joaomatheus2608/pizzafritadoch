@@ -333,14 +333,11 @@
           setStored(STORAGE_KEYS.PRODUCTS, list);
           return data;
         }
-      } catch (e) { console.warn('Erro ao salvar produto:', e); }
-      // Fallback local
-      const list = getStored(STORAGE_KEYS.PRODUCTS, window.INITIAL_PRODUCTS);
-      const saved = { ...prod, id: prod.id || generateId('prod'), updated_at: new Date().toISOString() };
-      const idx = list.findIndex(p => p.id === saved.id);
-      if (idx >= 0) list[idx] = saved; else list.push(saved);
-      setStored(STORAGE_KEYS.PRODUCTS, list);
-      return saved;
+      } catch (e) {
+        console.error('Erro ao salvar produto na API:', e);
+        throw e;
+      }
+      throw new Error('Servidor retornou resposta inválida ao salvar produto.');
     },
 
     async toggleProductAvailability(id, isAvailable) {

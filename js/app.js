@@ -136,7 +136,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.settings = bootstrap.settings || window.INITIAL_SETTINGS;
       state.operatingHours = bootstrap.hours || window.INITIAL_OPERATING_HOURS;
       state.categories = (bootstrap.categories || []).filter(c => c.is_active !== false).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-      state.products = (bootstrap.products || []).filter(p => p.is_active !== false);
+      state.products = (bootstrap.products || []).filter(p => p.is_active !== false).map(p => {
+        if (Array.isArray(p.sizes) && p.sizes.length > 0) {
+          p.has_sizes = true;
+          const sP = p.sizes.find(s => s.size_key === 'P');
+          const sM = p.sizes.find(s => s.size_key === 'M');
+          const sG = p.sizes.find(s => s.size_key === 'G');
+          if (sP) {
+            if (!p.price_p) p.price_p = sP.price;
+            if (sP.promo_price && !p.promo_price_p) p.promo_price_p = sP.promo_price;
+          }
+          if (sM) {
+            if (!p.price_m) p.price_m = sM.price;
+            if (sM.promo_price && !p.promo_price_m) p.promo_price_m = sM.promo_price;
+          }
+          if (sG) {
+            if (!p.price_g) p.price_g = sG.price;
+            if (sG.promo_price && !p.promo_price_g) p.promo_price_g = sG.promo_price;
+          }
+        }
+        return p;
+      });
       state.optionals = (bootstrap.optionals || []).filter(o => o.is_active !== false);
       state.promotions = (bootstrap.promotions || []).filter(p => p.is_active !== false);
       state.neighborhoods = bootstrap.neighborhoods || [];
@@ -580,24 +600,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             const promoPriceG = prod.promo_price_g || prod.sizes?.find(s => s.size_key === 'G')?.promo_price || 0;
             const hasPromoSizes = isPromoActive && (promoPriceP > 0 || promoPriceM > 0 || promoPriceG > 0);
 
-            if (isPromoToday && hasPromoSizes) {
-              // Mostra preços promoGionais P/M/G
-              const buildSizePromo = (lbl, regular, promo) => promo > 0 ? `
-                <span style="font-size:0.7rem;line-height:1.2;display:flex;align-items:center;gap:3px;">
-                  <b style="color:var(--primary-yellow)">${lbl}</b>
-                  <s style="color:var(--text-muted);font-size:0.65rem">${window.formatCurrency(regular)}</s>
-                  <span style="color:#22c55e;font-weight:800">${window.formatCurrency(promo)}</span>
-                </span>` : '';
+            if (isPromoToday && (hasPromoSizes || promoPrice > 0)) {
+              // Mostra preços promocionais P/M/G
+              const pEffP = promoPriceP > 0 ? promoPriceP : (promoPrice > 0 ? promoPrice : 0);
+              const pEffM = promoPriceM > 0 ? promoPriceM : (promoPrice > 0 ? promoPrice : 0);
+              const pEffG = promoPriceG > 0 ? promoPriceG : (promoPrice > 0 ? promoPrice : 0);
+              const buildSizePromo = (lbl, regular, promo) => {
+                if (promo > 0 && promo < regular) {
+                  return `<span style="font-size:0.72rem;line-height:1.2;display:flex;align-items:center;gap:3px;">
+                    <b style="color:var(--primary-yellow)">${lbl}</b>
+                    <s style="color:var(--text-muted);font-size:0.65rem">${window.formatCurrency(regular)}</s>
+                    <span style="color:#22c55e;font-weight:800">${window.formatCurrency(promo)}</span>
+                  </span>`;
+                } else if (regular > 0) {
+                  return `<span style="font-size:0.72rem;line-height:1.2;display:flex;align-items:center;gap:3px;">
+                    <b style="color:var(--primary-yellow)">${lbl}</b>
+                    <span>${window.formatCurrency(regular)}</span>
+                  </span>`;
+                }
+                return '';
+              };
               priceDisplayHtml = `<div style="display:flex;flex-direction:column;gap:2px">
-                ${buildSizePromo('P', priceP, promoPriceP)}
-                ${buildSizePromo('M', priceM, promoPriceM)}
-                ${buildSizePromo('G', priceG, promoPriceG)}
+                ${buildSizePromo('P', priceP, pEffP)}
+                ${buildSizePromo('M', priceM, pEffM)}
+                ${buildSizePromo('G', priceG, pEffG)}
               </div>`;
               const dayLabel = DAY_NAMES_FULL[todayDay].toUpperCase();
               promoBadgeHtml = `<span class="badge-tag-promo" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">🔥 PROMO HOJE (${dayLabel})</span>`;
-            } else if (hasDayPromo && hasPromoSizes) {
-              // Mostra badge com dias e preço menor da promo
-              const minPromo = Math.min(...[promoPriceP, promoPriceM, promoPriceG].filter(v => v > 0));
+            } else if (hasDayPromo) {
+              const minPromo = Math.min(...[promoPriceP, promoPriceM, promoPriceG, promoPrice].filter(v => v > 0));
               priceDisplayHtml = `<div style="display:flex;flex-direction:column;gap:1px">
                 ${priceP > 0 ? `<span style="font-size:0.7rem"><b style="color:var(--primary-yellow)">P</b> ${window.formatCurrency(priceP)}</span>` : ''}
                 ${priceM > 0 ? `<span style="font-size:0.7rem"><b style="color:var(--primary-yellow)">M</b> ${window.formatCurrency(priceM)}</span>` : ''}
@@ -695,6 +726,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // MODAL DE PRODUTO & TAMANHOS (PIZZA FRITA)
   // ==========================================
+  function getEffectiveSizePrice(product, sizeObj) {
+    if (!product || !sizeObj) return 0;
+    const todayDay = new Date().getDay();
+    const promoDays = window.normalizePromoDays
+      ? window.normalizePromoDays(product.promo_days, product.monday_price)
+      : (Array.isArray(product.promo_days) ? product.promo_days.map(Number) : (product.monday_price ? [1] : []));
+    const isPromoToday = product.is_promo !== false && promoDays.includes(todayDay);
+    const regPrice = Number(sizeObj.price) || 0;
+    if (isPromoToday) {
+      const pSizePromo = sizeObj.promo_price || (sizeObj.size_key === 'P' ? product.promo_price_p : sizeObj.size_key === 'M' ? product.promo_price_m : product.promo_price_g);
+      if (pSizePromo && Number(pSizePromo) > 0) return Number(pSizePromo);
+      if (product.promo_price && Number(product.promo_price) > 0) return Number(product.promo_price);
+    }
+    return regPrice;
+  }
+
   function renderPizzaSizes(product) {
     if (!dom.productModalSizesList || !dom.productModalSizesSection) return;
 
@@ -709,9 +756,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let sizes = product.sizes;
     if (!sizes || sizes.length === 0) {
       sizes = [
-        { size_key: 'P', name: 'P (Pequena)', price: Number(product.price_p || product.price || 25) },
-        { size_key: 'M', name: 'M (Média)', price: Number(product.price_m || 35) },
-        { size_key: 'G', name: 'G (Grande)', price: Number(product.price_g || 45) }
+        { size_key: 'P', name: 'P (Pequena)', price: Number(product.price_p || product.price || 25), promo_price: product.promo_price_p || null },
+        { size_key: 'M', name: 'M (Média)', price: Number(product.price_m || 35), promo_price: product.promo_price_m || null },
+        { size_key: 'G', name: 'G (Grande)', price: Number(product.price_g || 45), promo_price: product.promo_price_g || null }
       ];
     }
 
@@ -721,14 +768,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const defaultSize = sizes.find(s => s.size_key === 'M') || sizes[0];
     state.modalSelectedSize = defaultSize;
 
+    const todayDay = new Date().getDay();
+    const promoDays = window.normalizePromoDays
+      ? window.normalizePromoDays(product.promo_days, product.monday_price)
+      : (Array.isArray(product.promo_days) ? product.promo_days.map(Number) : (product.monday_price ? [1] : []));
+    const isPromoToday = product.is_promo !== false && promoDays.includes(todayDay);
+
     let html = '';
     sizes.forEach(s => {
       const isSelected = state.modalSelectedSize && state.modalSelectedSize.size_key === s.size_key;
+      const regPrice = Number(s.price) || 0;
+      const effPrice = getEffectiveSizePrice(product, s);
+      const isDiscounted = isPromoToday && effPrice > 0 && effPrice < regPrice;
+
+      let priceHtml = '';
+      if (isDiscounted) {
+        priceHtml = `
+          <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
+            <s style="font-size:0.75rem;color:var(--text-muted);">${window.formatCurrency(regPrice)}</s>
+            <span style="font-weight:900;font-size:0.95rem;color:#22c55e;">${window.formatCurrency(effPrice)}</span>
+          </div>
+        `;
+      } else {
+        priceHtml = `<div style="font-weight:800;font-size:0.88rem;color:var(--primary-yellow);margin-top:4px;">${window.formatCurrency(regPrice)}</div>`;
+      }
+
       html += `
         <div class="pizza-size-pill ${isSelected ? 'active' : ''}" data-size-key="${s.size_key}" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 8px; border-radius: 12px; background: ${isSelected ? 'rgba(217, 119, 6, 0.2)' : 'rgba(255,255,255,0.04)'}; border: 2px solid ${isSelected ? 'var(--primary-yellow)' : 'rgba(255,255,255,0.15)'}; cursor: pointer; transition: all 0.2s;">
           <div style="font-weight: 900; font-size: 1.15rem; color: #fff;">${s.size_key}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted); margin: 2px 0;">${s.name.includes('Pequena') ? 'Pequena' : s.name.includes('Média') ? 'Média' : s.name.includes('Grande') ? 'Grande' : s.name}</div>
-          <div style="font-weight: 800; font-size: 0.88rem; color: var(--primary-yellow); margin-top: 4px;">${window.formatCurrency(s.price)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin: 2px 0;">${s.name && s.name.includes('Pequena') ? 'Pequena' : s.name && s.name.includes('Média') ? 'Média' : s.name && s.name.includes('Grande') ? 'Grande' : (s.name || s.size_key)}</div>
+          ${priceHtml}
         </div>
       `;
     });
@@ -930,8 +999,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateModalDynamicPrice() {
     if (!state.currentModalProduct) return;
     let basePrice = getProductEffectivePrice(state.currentModalProduct);
-    if (state.modalSelectedSize && state.modalSelectedSize.price) {
-      basePrice = Number(state.modalSelectedSize.price);
+    if (state.modalSelectedSize) {
+      basePrice = getEffectiveSizePrice(state.currentModalProduct, state.modalSelectedSize);
     }
     const optsPrice = (state.modalSelectedOptionals || []).reduce((sum, opt) => sum + (Number(opt.price) || 0), 0);
     const unitTotal = basePrice + optsPrice;
@@ -1513,8 +1582,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!state.currentModalProduct) return;
 
         let effectivePrice = getProductEffectivePrice(state.currentModalProduct);
-        if (state.modalSelectedSize && state.modalSelectedSize.price) {
-          effectivePrice = Number(state.modalSelectedSize.price);
+        if (state.modalSelectedSize) {
+          effectivePrice = getEffectiveSizePrice(state.currentModalProduct, state.modalSelectedSize);
         }
 
         const productToAdd = {

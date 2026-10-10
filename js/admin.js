@@ -588,7 +588,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         orders.forEach(o => { if (o?.id) knownOrderIds.add(String(o.id)); });
         isFirstLoad = false;
       }
-      adminState.products = (bootstrap.products && bootstrap.products.length > 0) ? bootstrap.products : (window.INITIAL_PRODUCTS || []);
+      adminState.products = ((bootstrap.products && bootstrap.products.length > 0) ? bootstrap.products : (window.INITIAL_PRODUCTS || [])).map(p => {
+        if (Array.isArray(p.sizes) && p.sizes.length > 0) {
+          p.has_sizes = true;
+          const sP = p.sizes.find(s => s.size_key === 'P');
+          const sM = p.sizes.find(s => s.size_key === 'M');
+          const sG = p.sizes.find(s => s.size_key === 'G');
+          if (sP) {
+            if (!p.price_p) p.price_p = sP.price;
+            if (sP.promo_price && !p.promo_price_p) p.promo_price_p = sP.promo_price;
+          }
+          if (sM) {
+            if (!p.price_m) p.price_m = sM.price;
+            if (sM.promo_price && !p.promo_price_m) p.promo_price_m = sM.promo_price;
+          }
+          if (sG) {
+            if (!p.price_g) p.price_g = sG.price;
+            if (sG.promo_price && !p.promo_price_g) p.promo_price_g = sG.promo_price;
+          }
+        }
+        return p;
+      });
       adminState.categories = (bootstrap.categories && bootstrap.categories.length > 0) ? bootstrap.categories : (window.INITIAL_CATEGORIES || []);
       adminState.optionals = (bootstrap.optionals && bootstrap.optionals.length > 0) ? bootstrap.optionals : (window.INITIAL_OPTIONALS || []);
       adminState.promotions = bootstrap.promotions || [];
@@ -3310,10 +3330,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dom.dayPromoRegularPriceM) dom.dayPromoRegularPriceM.value = pM;
         if (dom.dayPromoRegularPriceG) dom.dayPromoRegularPriceG.value = pG;
 
-        // Preços promocionais por tamanho (guarda em sizes_promo_p/m/g ou promo_price_p/m/g)
-        const promoP = prod.promo_price_p || prod.promo_sizes?.find(s => s.size_key === 'P')?.price || '';
-        const promoM = prod.promo_price_m || prod.promo_sizes?.find(s => s.size_key === 'M')?.price || '';
-        const promoG = prod.promo_price_g || prod.promo_sizes?.find(s => s.size_key === 'G')?.price || '';
+        // Preços promocionais por tamanho (guarda em sizes ou promo_price_p/m/g)
+        const promoP = prod.promo_price_p || prod.sizes?.find(s => s.size_key === 'P')?.promo_price || '';
+        const promoM = prod.promo_price_m || prod.sizes?.find(s => s.size_key === 'M')?.promo_price || '';
+        const promoG = prod.promo_price_g || prod.sizes?.find(s => s.size_key === 'G')?.promo_price || '';
         if (dom.dayPromoPriceP) dom.dayPromoPriceP.value = promoP;
         if (dom.dayPromoPriceM) dom.dayPromoPriceM.value = promoM;
         if (dom.dayPromoPriceG) dom.dayPromoPriceG.value = promoG;
@@ -3479,7 +3499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Coleta todos os produtos que possuem promoção configurada
     const promoProducts = (adminState.products || []).filter(p => {
-      const pPrice = Number(p.promo_price) || Number(p.monday_price) || 0;
+      const pPrice = Number(p.promo_price) || Number(p.monday_price) || Number(p.promo_price_p) || Number(p.sizes?.find(s => s.promo_price > 0)?.promo_price) || 0;
       const pDays = window.normalizePromoDays ? window.normalizePromoDays(p.promo_days, p.monday_price) : (Array.isArray(p.promo_days) ? p.promo_days : []);
       return pPrice > 0 && pDays.length > 0;
     });
@@ -3536,10 +3556,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       const isToday = pDays.includes(todayDay) && (p.is_promo !== false);
       const isAct = p.is_promo !== false;
 
-      let discountText = '';
-      if (regularPrice > 0 && promoPrice > 0 && regularPrice > promoPrice) {
-        const discountPct = Math.round(((regularPrice - promoPrice) / regularPrice) * 100);
-        discountText = `<span style="font-size: 0.72rem; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 4px; margin-left: 4px;">-${discountPct}%</span>`;
+      const hasPizzaSizes = Boolean(p.has_sizes === true || p.has_sizes === 'true');
+      const pPriceP = p.promo_price_p || p.sizes?.find(s => s.size_key === 'P')?.promo_price || 0;
+      const pPriceM = p.promo_price_m || p.sizes?.find(s => s.size_key === 'M')?.promo_price || 0;
+      const pPriceG = p.promo_price_g || p.sizes?.find(s => s.size_key === 'G')?.promo_price || 0;
+      const hasSizesPromo = hasPizzaSizes && (pPriceP > 0 || pPriceM > 0 || pPriceG > 0);
+
+      let regularPriceCell = '';
+      let promoPriceCell = '';
+
+      if (hasSizesPromo) {
+        regularPriceCell = `
+          <div style="font-size:0.75rem;color:#64748b;line-height:1.3;${isToday ? 'text-decoration:line-through;' : ''}">
+            ${p.price_p ? `<b>P:</b> ${window.formatCurrency(p.price_p)}<br>` : ''}
+            ${p.price_m ? `<b>M:</b> ${window.formatCurrency(p.price_m)}<br>` : ''}
+            ${p.price_g ? `<b>G:</b> ${window.formatCurrency(p.price_g)}` : ''}
+          </div>
+        `;
+        promoPriceCell = `
+          <div style="font-size:0.85rem;color:#16a34a;font-weight:800;line-height:1.3;">
+            ${pPriceP ? `P: ${window.formatCurrency(pPriceP)}<br>` : ''}
+            ${pPriceM ? `M: ${window.formatCurrency(pPriceM)}<br>` : ''}
+            ${pPriceG ? `G: ${window.formatCurrency(pPriceG)}` : ''}
+          </div>
+        `;
+      } else {
+        let discountText = '';
+        if (regularPrice > 0 && promoPrice > 0 && regularPrice > promoPrice) {
+          const discountPct = Math.round(((regularPrice - promoPrice) / regularPrice) * 100);
+          discountText = `<span style="font-size: 0.72rem; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 4px; margin-left: 4px;">-${discountPct}%</span>`;
+        }
+        regularPriceCell = `<span style="color: #64748b; ${isToday ? 'text-decoration: line-through;' : ''}">${regularPrice > 0 ? window.formatCurrency(regularPrice) : 'A definir'}</span>`;
+        promoPriceCell = `<strong style="color: #16a34a; font-size: 0.95rem;">${window.formatCurrency(promoPrice)}</strong> ${discountText}`;
       }
 
       let dayBadgesHtml = pDays.map(d => {
@@ -3558,11 +3606,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               </div>
             </div>
           </td>
-          <td><span style="color: #64748b; ${isToday ? 'text-decoration: line-through;' : ''}">${regularPrice > 0 ? window.formatCurrency(regularPrice) : 'A definir'}</span></td>
-          <td>
-            <strong style="color: #16a34a; font-size: 0.95rem;">${window.formatCurrency(promoPrice)}</strong>
-            ${discountText}
-          </td>
+          <td>${regularPriceCell}</td>
+          <td>${promoPriceCell}</td>
           <td>
             <div style="display: flex; flex-wrap: wrap; max-width: 260px;">
               ${dayBadgesHtml}

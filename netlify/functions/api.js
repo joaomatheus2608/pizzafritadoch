@@ -45,6 +45,25 @@ async function supabaseRpc(funcName, params = {}) {
   return data;
 }
 
+// Atualiza (PATCH) ou insere (POST) registros suportando tanto UUIDs quanto IDs em texto
+async function upsertSupabaseEntity(table, id, payload) {
+  if (id) {
+    const patchRes = await supabaseFetch(`/${table}?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+    if (Array.isArray(patchRes) && patchRes.length > 0) {
+      return patchRes[0];
+    }
+  }
+  const finalId = id || (`${table.replace(/s$/, '')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
+  const postRes = await supabaseFetch(`/${table}`, {
+    method: 'POST',
+    body: JSON.stringify({ id: finalId, ...payload })
+  });
+  return Array.isArray(postRes) ? postRes[0] : postRes;
+}
+
 // Upload de imagem via Supabase Storage
 async function uploadToStorage(base64Data, fileName, mimeType) {
   const cleanFileName = String(fileName || '').replace(/^products\//, '').replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -137,7 +156,7 @@ exports.handler = async function(event) {
           neighborhoods: neighborhoods || [],
           couriers: couriers || []
         }
-      }, 60); // 60 segundos de cache CDN para não estourar requisições
+      }, 0); // Sem cache de CDN para que alterações no painel e cardápio apareçam em tempo real
     }
 
     // -------------------------------------------------------
@@ -231,21 +250,7 @@ exports.handler = async function(event) {
         order_index: Number(cat.order_index) || 0,
         is_active: cat.is_active !== false
       };
-      let data;
-      if (cat.id && /^[0-9a-f-]{36}$/i.test(cat.id)) {
-        data = await supabaseFetch(`/categories?id=eq.${cat.id}`, {
-          method: 'PATCH', body: JSON.stringify(cleanPayload)
-        });
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-          data = await supabaseFetch('/categories', {
-            method: 'POST', body: JSON.stringify({ id: cat.id, ...cleanPayload })
-          });
-        }
-      } else {
-        data = await supabaseFetch('/categories', {
-          method: 'POST', body: JSON.stringify(cleanPayload)
-        });
-      }
+      const data = await upsertSupabaseEntity('categories', cat.id, cleanPayload);
       return respond(200, { data: Array.isArray(data) ? data[0] : data });
     }
 
@@ -271,51 +276,64 @@ exports.handler = async function(event) {
     // -------------------------------------------------------
     if (method === 'POST' && path === 'save-product') {
       const prod = body;
-      const isExistingUuid = prod.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prod.id);
-      
-      // Valida e resolve category_id
+      const prodId = prod.id ? String(prod.id).trim() : '';
+
+      // Valida e resolve category_id sem sobrescrever indevidamente
       let categoryId = prod.category_id || null;
-      if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-        const LEGACY_MAP = {
-          'cat-promo': 'promocoes-do-boy',
-          'cat-acomp': 'acompanhamentos-do-boy',
-          'cat-pao': 'pao-de-alho-do-boy-degusta',
-          'cat-adic': 'adicional',
-          'cat-burguer': 'boy-degusta-burguer',
-          'cat-brasa': 'boy-degusta-na-brasa',
-          'cat-beirute': 'beirute-boy-degusta',
-          'cat-batata': 'batatas-boy-degusta',
-          'cat-bebidas': 'bebidas-do-boy'
-        };
-        const targetSlug = LEGACY_MAP[categoryId] || categoryId;
+      if (categoryId) {
         try {
-          const cats = await supabaseFetch(`/categories?slug=eq.${targetSlug}&limit=1`);
-          if (Array.isArray(cats) && cats[0]?.id) {
-            categoryId = cats[0].id;
+          const catById = await supabaseFetch(`/categories?id=eq.${encodeURIComponent(categoryId)}&limit=1`);
+          if (Array.isArray(catById) && catById.length > 0) {
+            categoryId = catById[0].id;
           } else {
-            const allCats = await supabaseFetch('/categories?limit=1');
-            categoryId = allCats[0]?.id || null;
+            const catBySlug = await supabaseFetch(`/categories?slug=eq.${encodeURIComponent(categoryId)}&limit=1`);
+            if (Array.isArray(catBySlug) && catBySlug.length > 0) {
+              categoryId = catBySlug[0].id;
+            }
           }
         } catch {
-          categoryId = null;
+          // Mantém o categoryId original
         }
       }
 
-      // Reconstrói sizes para pizzas com tamanhos
+      // Reconstrói sizes para pizzas com tamanhos garantindo promo_price em cada tamanho
       let sizesArr = [];
       if (Array.isArray(prod.sizes) && prod.sizes.length > 0) {
-        sizesArr = prod.sizes;
+        sizesArr = prod.sizes.map(s => {
+          const promo = (s.promo_price !== null && s.promo_price !== undefined && s.promo_price !== '') ? Number(s.promo_price) : null;
+          return {
+            size_key: s.size_key || 'P',
+            name: s.name || s.size_key,
+            price: Number(s.price || 0),
+            promo_price: promo
+          };
+        });
       } else if (prod.has_sizes) {
         const pP = (prod.price_p !== null && prod.price_p !== undefined && prod.price_p !== '') ? Number(prod.price_p) : Number(prod.price || 0);
         const pM = (prod.price_m !== null && prod.price_m !== undefined && prod.price_m !== '') ? Number(prod.price_m) : 0;
         const pG = (prod.price_g !== null && prod.price_g !== undefined && prod.price_g !== '') ? Number(prod.price_g) : 0;
+        const ppP = (prod.promo_price_p !== null && prod.promo_price_p !== undefined && prod.promo_price_p !== '') ? Number(prod.promo_price_p) : null;
+        const ppM = (prod.promo_price_m !== null && prod.promo_price_m !== undefined && prod.promo_price_m !== '') ? Number(prod.promo_price_m) : null;
+        const ppG = (prod.promo_price_g !== null && prod.promo_price_g !== undefined && prod.promo_price_g !== '') ? Number(prod.promo_price_g) : null;
         if (pP > 0 || pM > 0 || pG > 0) {
           sizesArr = [
-            { size_key: 'P', name: 'P (Pequena)', price: pP },
-            { size_key: 'M', name: 'M (Média)', price: pM },
-            { size_key: 'G', name: 'G (Grande)', price: pG }
+            { size_key: 'P', name: 'P (Pequena)', price: pP, promo_price: ppP },
+            { size_key: 'M', name: 'M (Média)', price: pM, promo_price: ppM },
+            { size_key: 'G', name: 'G (Grande)', price: pG, promo_price: ppG }
           ];
         }
+      }
+
+      let promoPrice = (prod.promo_price !== null && prod.promo_price !== undefined && prod.promo_price !== '') ? Number(prod.promo_price) : null;
+      if (!promoPrice && sizesArr.length > 0) {
+        const anyPromo = sizesArr.find(s => s.promo_price > 0)?.promo_price;
+        if (anyPromo) promoPrice = Number(anyPromo);
+      }
+
+      const promoDays = Array.isArray(prod.promo_days) ? prod.promo_days.map(Number) : [];
+      let mondayPrice = (prod.monday_price !== null && prod.monday_price !== undefined && prod.monday_price !== '') ? Number(prod.monday_price) : null;
+      if (!mondayPrice && promoDays.includes(1) && promoPrice) {
+        mondayPrice = promoPrice;
       }
 
       // Payload usando APENAS colunas conhecidas do schema real do banco
@@ -333,9 +351,9 @@ exports.handler = async function(event) {
         is_available: prod.is_available !== false,
         is_active: prod.is_active !== false,
         is_promo: Boolean(prod.is_promo),
-        promo_days: Array.isArray(prod.promo_days) ? prod.promo_days : [],
-        promo_price: (prod.promo_price !== null && prod.promo_price !== undefined && prod.promo_price !== '') ? Number(prod.promo_price) : null,
-        monday_price: (prod.monday_price !== null && prod.monday_price !== undefined && prod.monday_price !== '') ? Number(prod.monday_price) : null,
+        promo_days: promoDays,
+        promo_price: promoPrice,
+        monday_price: mondayPrice,
         sales_channel: prod.sales_channel ? String(prod.sales_channel).trim() : 'todos',
         order_index: Number(prod.order_index) || 0,
         updated_at: new Date().toISOString()
@@ -343,17 +361,9 @@ exports.handler = async function(event) {
 
       let data;
       try {
-        if (isExistingUuid) {
-          data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
-            method: 'PATCH', body: JSON.stringify(cleanPayload)
-          });
-        } else {
-          data = await supabaseFetch('/products', {
-            method: 'POST', body: JSON.stringify(cleanPayload)
-          });
-        }
+        data = await upsertSupabaseEntity('products', prodId, cleanPayload);
       } catch (err) {
-        console.warn('Falha ao salvar produto completo, tentando payload sem colunas opcionais:', err.message);
+        console.warn('Falha ao salvar produto completo, tentando payload sem has_sizes/sizes:', err.message);
         // Fallback 1: sem has_sizes/sizes (caso essas colunas não existam no DB)
         const safePayload = {
           name: cleanPayload.name,
@@ -374,17 +384,9 @@ exports.handler = async function(event) {
           updated_at: cleanPayload.updated_at
         };
         try {
-          if (isExistingUuid) {
-            data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
-              method: 'PATCH', body: JSON.stringify(safePayload)
-            });
-          } else {
-            data = await supabaseFetch('/products', {
-              method: 'POST', body: JSON.stringify(safePayload)
-            });
-          }
+          data = await upsertSupabaseEntity('products', prodId, safePayload);
         } catch (err2) {
-          console.warn('Fallback 1 falhou, tentando payload mínimo:', err2.message);
+          console.warn('Fallback 1 falhou, tentando payload mínimo com promo:', err2.message);
           // Fallback 2: payload absolutamente mínimo
           const minPayload = {
             name: cleanPayload.name,
@@ -401,27 +403,17 @@ exports.handler = async function(event) {
             order_index: cleanPayload.order_index,
             updated_at: cleanPayload.updated_at
           };
-          if (isExistingUuid) {
-            data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
-              method: 'PATCH', body: JSON.stringify(minPayload)
-            });
-          } else {
-            data = await supabaseFetch('/products', {
-              method: 'POST', body: JSON.stringify(minPayload)
-            });
-          }
+          data = await upsertSupabaseEntity('products', prodId, minPayload);
         }
       }
-      // Retorna produto salvo com campos opcionais mesclados para consistência no front-end
-      const savedProduct = Array.isArray(data) ? data[0] : data;
-      if (savedProduct) {
-        if (savedProduct.has_sizes === undefined) savedProduct.has_sizes = cleanPayload.has_sizes;
-        if (!savedProduct.sizes || savedProduct.sizes.length === 0) savedProduct.sizes = cleanPayload.sizes;
-        if (savedProduct.price_p === undefined) savedProduct.price_p = cleanPayload.price_p;
-        if (savedProduct.price_m === undefined) savedProduct.price_m = cleanPayload.price_m;
-        if (savedProduct.price_g === undefined) savedProduct.price_g = cleanPayload.price_g;
-      }
-      return respond(200, { data: savedProduct });
+      // Retorna produto salvo mesclado com cleanPayload para consistência no front-end
+      const savedProduct = Array.isArray(data) ? data[0] : (data || {});
+      const mergedProduct = {
+        ...cleanPayload,
+        ...savedProduct,
+        id: savedProduct?.id || prodId
+      };
+      return respond(200, { data: mergedProduct });
     }
 
     // -------------------------------------------------------
@@ -446,9 +438,6 @@ exports.handler = async function(event) {
     // -------------------------------------------------------
     if (method === 'POST' && path === 'save-optional') {
       const opt = body;
-      let data;
-      const isExistingUuid = opt.id && /^[0-9a-f-]{36}$/i.test(opt.id);
-
       const cleanPayload = {
         name: String(opt.name || '').trim(),
         price: Number(opt.price) || 0,
@@ -458,16 +447,9 @@ exports.handler = async function(event) {
         applicable_category_ids: Array.isArray(opt.applicable_category_ids) ? opt.applicable_category_ids : []
       };
 
+      let data;
       try {
-        if (isExistingUuid) {
-          data = await supabaseFetch(`/optionals?id=eq.${opt.id}`, {
-            method: 'PATCH', body: JSON.stringify(cleanPayload)
-          });
-        } else {
-          data = await supabaseFetch('/optionals', {
-            method: 'POST', body: JSON.stringify(opt.id ? { id: opt.id, ...cleanPayload } : cleanPayload)
-          });
-        }
+        data = await upsertSupabaseEntity('optionals', opt.id, cleanPayload);
       } catch (err) {
         console.warn('Falha ao salvar adicional completo no Supabase, tentando campos padrão:', err.message);
         const safePayload = {
@@ -476,15 +458,7 @@ exports.handler = async function(event) {
           is_active: cleanPayload.is_active,
           order_index: cleanPayload.order_index
         };
-        if (isExistingUuid) {
-          data = await supabaseFetch(`/optionals?id=eq.${opt.id}`, {
-            method: 'PATCH', body: JSON.stringify(safePayload)
-          });
-        } else {
-          data = await supabaseFetch('/optionals', {
-            method: 'POST', body: JSON.stringify(opt.id ? { id: opt.id, ...safePayload } : safePayload)
-          });
-        }
+        data = await upsertSupabaseEntity('optionals', opt.id, safePayload);
       }
       const finalData = Array.isArray(data) ? data[0] : (data || cleanPayload);
       return respond(200, { data: { ...cleanPayload, ...finalData, id: finalData?.id || opt.id } });
@@ -726,21 +700,7 @@ exports.handler = async function(event) {
         delivery_time_min: Number(n.delivery_time_min) || 60,
         is_active: n.is_active !== false
       };
-      let data;
-      if (n.id && /^[0-9a-f-]{36}$/i.test(n.id)) {
-        data = await supabaseFetch(`/neighborhoods?id=eq.${n.id}`, {
-          method: 'PATCH', body: JSON.stringify(cleanPayload)
-        });
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-          data = await supabaseFetch('/neighborhoods', {
-            method: 'POST', body: JSON.stringify({ id: n.id, ...cleanPayload })
-          });
-        }
-      } else {
-        data = await supabaseFetch('/neighborhoods', {
-          method: 'POST', body: JSON.stringify(cleanPayload)
-        });
-      }
+      const data = await upsertSupabaseEntity('neighborhoods', n.id, cleanPayload);
       return respond(200, { data: Array.isArray(data) ? data[0] : data });
     }
 
@@ -771,21 +731,7 @@ exports.handler = async function(event) {
         phone: String(c.phone || '').trim(),
         is_active: c.is_active !== false
       };
-      let data;
-      if (c.id && /^[0-9a-f-]{36}$/i.test(c.id)) {
-        data = await supabaseFetch(`/couriers?id=eq.${c.id}`, {
-          method: 'PATCH', body: JSON.stringify(cleanPayload)
-        });
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-          data = await supabaseFetch('/couriers', {
-            method: 'POST', body: JSON.stringify({ id: c.id, ...cleanPayload })
-          });
-        }
-      } else {
-        data = await supabaseFetch('/couriers', {
-          method: 'POST', body: JSON.stringify(cleanPayload)
-        });
-      }
+      const data = await upsertSupabaseEntity('couriers', c.id, cleanPayload);
       return respond(200, { data: Array.isArray(data) ? data[0] : data });
     }
 
