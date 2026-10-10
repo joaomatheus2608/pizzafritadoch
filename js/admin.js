@@ -277,8 +277,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnRemoveDayPromo: document.getElementById('btnRemoveDayPromo'),
     dayPromoProdId: document.getElementById('dayPromoProdId'),
     dayPromoProdSelect: document.getElementById('dayPromoProdSelect'),
+    dayPromoSimplePriceFields: document.getElementById('dayPromoSimplePriceFields'),
+    dayPromoSizePriceFields: document.getElementById('dayPromoSizePriceFields'),
     dayPromoRegularPrice: document.getElementById('dayPromoRegularPrice'),
     dayPromoPrice: document.getElementById('dayPromoPrice'),
+    dayPromoRegularPriceP: document.getElementById('dayPromoRegularPriceP'),
+    dayPromoRegularPriceM: document.getElementById('dayPromoRegularPriceM'),
+    dayPromoRegularPriceG: document.getElementById('dayPromoRegularPriceG'),
+    dayPromoPriceP: document.getElementById('dayPromoPriceP'),
+    dayPromoPriceM: document.getElementById('dayPromoPriceM'),
+    dayPromoPriceG: document.getElementById('dayPromoPriceG'),
     dayPromoLabel: document.getElementById('dayPromoLabel'),
     dayPromoActive: document.getElementById('dayPromoActive'),
 
@@ -3255,27 +3263,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dayCheckboxes = document.querySelectorAll('input[name="dayPromoDayCheckbox"]');
 
     function fillProductPromoData(prod) {
+      // Limpa tudo
+      if (dom.dayPromoRegularPrice) dom.dayPromoRegularPrice.value = '';
+      if (dom.dayPromoPrice) dom.dayPromoPrice.value = '';
+      if (dom.dayPromoRegularPriceP) dom.dayPromoRegularPriceP.value = '';
+      if (dom.dayPromoRegularPriceM) dom.dayPromoRegularPriceM.value = '';
+      if (dom.dayPromoRegularPriceG) dom.dayPromoRegularPriceG.value = '';
+      if (dom.dayPromoPriceP) dom.dayPromoPriceP.value = '';
+      if (dom.dayPromoPriceM) dom.dayPromoPriceM.value = '';
+      if (dom.dayPromoPriceG) dom.dayPromoPriceG.value = '';
+      if (dom.dayPromoLabel) dom.dayPromoLabel.value = '';
+      if (dom.dayPromoActive) dom.dayPromoActive.value = 'true';
+      dayCheckboxes.forEach(cb => { cb.checked = false; });
+
       if (!prod) {
         dom.dayPromoProdId.value = '';
-        dom.dayPromoRegularPrice.value = '';
-        dom.dayPromoPrice.value = '';
-        if (dom.dayPromoLabel) dom.dayPromoLabel.value = '';
-        if (dom.dayPromoActive) dom.dayPromoActive.value = 'true';
-        dayCheckboxes.forEach(cb => { cb.checked = false; });
         if (dom.btnRemoveDayPromo) dom.btnRemoveDayPromo.style.display = 'none';
+        // Volta para modo preço simples
+        if (dom.dayPromoSimplePriceFields) dom.dayPromoSimplePriceFields.style.display = '';
+        if (dom.dayPromoSizePriceFields) dom.dayPromoSizePriceFields.style.display = 'none';
         return;
       }
 
       dom.dayPromoProdId.value = prod.id;
-      dom.dayPromoRegularPrice.value = (prod.price !== null && prod.price !== undefined) ? prod.price : '';
-      dom.dayPromoPrice.value = prod.promo_price || prod.monday_price || '';
       if (dom.dayPromoLabel) dom.dayPromoLabel.value = prod.promo_label || '';
       if (dom.dayPromoActive) dom.dayPromoActive.value = String(prod.is_promo !== false);
 
-      const activeDays = window.normalizePromoDays ? window.normalizePromoDays(prod.promo_days, prod.monday_price).map(String) : (Array.isArray(prod.promo_days) ? prod.promo_days.map(String) : (prod.monday_price ? ['1'] : []));
+      const activeDays = window.normalizePromoDays
+        ? window.normalizePromoDays(prod.promo_days, prod.monday_price).map(String)
+        : (Array.isArray(prod.promo_days) ? prod.promo_days.map(String) : (prod.monday_price ? ['1'] : []));
       dayCheckboxes.forEach(cb => { cb.checked = activeDays.includes(String(cb.value)); });
 
-      const hasPromo = Boolean(prod.promo_price || prod.monday_price || (activeDays.length > 0));
+      // Detecta se é pizza com tamanhos
+      const hasSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
+
+      if (hasSizes) {
+        // Mostra campos P/M/G, esconde campo simples
+        if (dom.dayPromoSimplePriceFields) dom.dayPromoSimplePriceFields.style.display = 'none';
+        if (dom.dayPromoSizePriceFields) dom.dayPromoSizePriceFields.style.display = '';
+
+        // Preços normais por tamanho
+        const pP = prod.price_p || prod.sizes?.find(s => s.size_key === 'P')?.price || '';
+        const pM = prod.price_m || prod.sizes?.find(s => s.size_key === 'M')?.price || '';
+        const pG = prod.price_g || prod.sizes?.find(s => s.size_key === 'G')?.price || '';
+        if (dom.dayPromoRegularPriceP) dom.dayPromoRegularPriceP.value = pP;
+        if (dom.dayPromoRegularPriceM) dom.dayPromoRegularPriceM.value = pM;
+        if (dom.dayPromoRegularPriceG) dom.dayPromoRegularPriceG.value = pG;
+
+        // Preços promocionais por tamanho (guarda em sizes_promo_p/m/g ou promo_price_p/m/g)
+        const promoP = prod.promo_price_p || prod.promo_sizes?.find(s => s.size_key === 'P')?.price || '';
+        const promoM = prod.promo_price_m || prod.promo_sizes?.find(s => s.size_key === 'M')?.price || '';
+        const promoG = prod.promo_price_g || prod.promo_sizes?.find(s => s.size_key === 'G')?.price || '';
+        if (dom.dayPromoPriceP) dom.dayPromoPriceP.value = promoP;
+        if (dom.dayPromoPriceM) dom.dayPromoPriceM.value = promoM;
+        if (dom.dayPromoPriceG) dom.dayPromoPriceG.value = promoG;
+      } else {
+        // Mostra campo simples, esconde P/M/G
+        if (dom.dayPromoSimplePriceFields) dom.dayPromoSimplePriceFields.style.display = '';
+        if (dom.dayPromoSizePriceFields) dom.dayPromoSizePriceFields.style.display = 'none';
+
+        if (dom.dayPromoRegularPrice) dom.dayPromoRegularPrice.value = (prod.price !== null && prod.price !== undefined) ? prod.price : '';
+        if (dom.dayPromoPrice) dom.dayPromoPrice.value = prod.promo_price || prod.monday_price || '';
+      }
+
+      const hasPromo = Boolean(prod.promo_price || prod.monday_price || prod.promo_price_p || (activeDays.length > 0));
       if (dom.btnRemoveDayPromo) dom.btnRemoveDayPromo.style.display = hasPromo ? 'inline-flex' : 'none';
     }
 
@@ -3340,11 +3391,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const prod = adminState.products.find(p => p.id === prodId);
       if (!prod) return;
 
-      const regularPrice = Number(dom.dayPromoRegularPrice.value) || 0;
-      const promoPrice = Number(dom.dayPromoPrice.value) || 0;
       const promoLabel = dom.dayPromoLabel ? dom.dayPromoLabel.value.trim() : '';
       const is_promo = dom.dayPromoActive ? dom.dayPromoActive.value === 'true' : true;
-
       const checkedDays = Array.from(document.querySelectorAll('input[name="dayPromoDayCheckbox"]:checked')).map(cb => Number(cb.value));
 
       if (checkedDays.length === 0 && is_promo) {
@@ -3352,19 +3400,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      prod.price = regularPrice;
-      prod.promo_price = promoPrice;
+      const hasSizes = Boolean(prod.has_sizes === true || prod.has_sizes === 'true');
+
+      if (hasSizes) {
+        // Pizza com tamanhos P/M/G
+        const rpP = Number(dom.dayPromoRegularPriceP?.value) || 0;
+        const rpM = Number(dom.dayPromoRegularPriceM?.value) || 0;
+        const rpG = Number(dom.dayPromoRegularPriceG?.value) || 0;
+        const ppP = Number(dom.dayPromoPriceP?.value) || 0;
+        const ppM = Number(dom.dayPromoPriceM?.value) || 0;
+        const ppG = Number(dom.dayPromoPriceG?.value) || 0;
+
+        if (is_promo && ppP === 0 && ppM === 0 && ppG === 0) {
+          alert('Informe pelo menos um preço promocional (P, M ou G).');
+          return;
+        }
+
+        // Atualiza preços normais e promo por tamanho
+        prod.price_p = rpP || prod.price_p || null;
+        prod.price_m = rpM || prod.price_m || null;
+        prod.price_g = rpG || prod.price_g || null;
+        prod.promo_price_p = ppP || null;
+        prod.promo_price_m = ppM || null;
+        prod.promo_price_g = ppG || null;
+        // Usa o menor tamanho como promo_price de referência para compatibilidade
+        prod.promo_price = ppP || ppM || ppG || null;
+        prod.price = prod.price_p || prod.price || null;
+        // Reconstrói sizes com preços atualizados
+        prod.sizes = [
+          { size_key: 'P', name: 'P (Pequena)', price: prod.price_p || 0, promo_price: ppP || null },
+          { size_key: 'M', name: 'M (Média)', price: prod.price_m || 0, promo_price: ppM || null },
+          { size_key: 'G', name: 'G (Grande)', price: prod.price_g || 0, promo_price: ppG || null }
+        ];
+      } else {
+        // Produto simples (preço único)
+        const regularPrice = Number(dom.dayPromoRegularPrice?.value) || 0;
+        const promoPrice = Number(dom.dayPromoPrice?.value) || 0;
+
+        if (is_promo && promoPrice === 0) {
+          alert('Informe o preço promocional.');
+          return;
+        }
+
+        prod.price = regularPrice || prod.price;
+        prod.promo_price = promoPrice || null;
+        prod.monday_price = checkedDays.includes(1) ? promoPrice : null;
+      }
+
       prod.promo_days = checkedDays;
       prod.promo_label = promoLabel || null;
       prod.is_promo = is_promo;
-      prod.monday_price = checkedDays.includes(1) ? promoPrice : null;
+      prod.monday_price = checkedDays.includes(1) ? (prod.promo_price || null) : null;
 
-      const saved = await window.db.saveProduct(prod);
-      adminState.products = adminState.products.map(p => p.id === prodId ? saved : p);
-
-      dom.dayPromoModal.style.display = 'none';
-      renderProducts();
-      renderPromotions();
+      try {
+        const saved = await window.db.saveProduct(prod);
+        // Mescla campos que o backend pode não retornar
+        const merged = { ...prod, ...saved };
+        adminState.products = adminState.products.map(p => p.id === prodId ? merged : p);
+        dom.dayPromoModal.style.display = 'none';
+        renderProducts();
+        renderPromotions();
+      } catch (err) {
+        console.error('Erro ao salvar promoção:', err);
+        alert('Erro ao salvar promoção. Tente novamente.');
+      }
     });
   }
 

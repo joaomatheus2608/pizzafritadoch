@@ -573,7 +573,47 @@ document.addEventListener('DOMContentLoaded', async () => {
           const priceM = prod.price_m || 0;
           const priceG = prod.price_g || 0;
 
-          if (isPromoToday) {
+          if (hasPizzaSizes && (priceP > 0 || priceM > 0 || priceG > 0)) {
+            // Pizza com tamanhos: verifica se há promoção ativa hoje
+            const promoPriceP = prod.promo_price_p || prod.sizes?.find(s => s.size_key === 'P')?.promo_price || 0;
+            const promoPriceM = prod.promo_price_m || prod.sizes?.find(s => s.size_key === 'M')?.promo_price || 0;
+            const promoPriceG = prod.promo_price_g || prod.sizes?.find(s => s.size_key === 'G')?.promo_price || 0;
+            const hasPromoSizes = isPromoActive && (promoPriceP > 0 || promoPriceM > 0 || promoPriceG > 0);
+
+            if (isPromoToday && hasPromoSizes) {
+              // Mostra preços promoGionais P/M/G
+              const buildSizePromo = (lbl, regular, promo) => promo > 0 ? `
+                <span style="font-size:0.7rem;line-height:1.2;display:flex;align-items:center;gap:3px;">
+                  <b style="color:var(--primary-yellow)">${lbl}</b>
+                  <s style="color:var(--text-muted);font-size:0.65rem">${window.formatCurrency(regular)}</s>
+                  <span style="color:#22c55e;font-weight:800">${window.formatCurrency(promo)}</span>
+                </span>` : '';
+              priceDisplayHtml = `<div style="display:flex;flex-direction:column;gap:2px">
+                ${buildSizePromo('P', priceP, promoPriceP)}
+                ${buildSizePromo('M', priceM, promoPriceM)}
+                ${buildSizePromo('G', priceG, promoPriceG)}
+              </div>`;
+              const dayLabel = DAY_NAMES_FULL[todayDay].toUpperCase();
+              promoBadgeHtml = `<span class="badge-tag-promo" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">🔥 PROMO HOJE (${dayLabel})</span>`;
+            } else if (hasDayPromo && hasPromoSizes) {
+              // Mostra badge com dias e preço menor da promo
+              const minPromo = Math.min(...[promoPriceP, promoPriceM, promoPriceG].filter(v => v > 0));
+              priceDisplayHtml = `<div style="display:flex;flex-direction:column;gap:1px">
+                ${priceP > 0 ? `<span style="font-size:0.7rem"><b style="color:var(--primary-yellow)">P</b> ${window.formatCurrency(priceP)}</span>` : ''}
+                ${priceM > 0 ? `<span style="font-size:0.7rem"><b style="color:var(--primary-yellow)">M</b> ${window.formatCurrency(priceM)}</span>` : ''}
+                ${priceG > 0 ? `<span style="font-size:0.7rem"><b style="color:var(--primary-yellow)">G</b> ${window.formatCurrency(priceG)}</span>` : ''}
+              </div>`;
+              const daysText = promoDays.map(d => DAY_NAMES[d] || d).join(', ');
+              promoBadgeHtml = `<span class="badge-tag-promo" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">📅 A partir de ${window.formatCurrency(minPromo)} na ${daysText}</span>`;
+            } else {
+              // Mostra P/M/G sem promo
+              priceDisplayHtml = `<div style="display:flex;flex-direction:column;gap:1px">
+                ${priceP > 0 ? `<span style="font-size:0.72rem;line-height:1.3"><b style="color:var(--primary-yellow)">P</b> <span class="food-card-price-val" style="font-size:0.85rem">${window.formatCurrency(priceP)}</span></span>` : ''}
+                ${priceM > 0 ? `<span style="font-size:0.72rem;line-height:1.3"><b style="color:var(--primary-yellow)">M</b> <span class="food-card-price-val" style="font-size:0.85rem">${window.formatCurrency(priceM)}</span></span>` : ''}
+                ${priceG > 0 ? `<span style="font-size:0.72rem;line-height:1.3"><b style="color:var(--primary-yellow)">G</b> <span class="food-card-price-val" style="font-size:0.85rem">${window.formatCurrency(priceG)}</span></span>` : ''}
+              </div>`;
+            }
+          } else if (isPromoToday) {
             priceDisplayHtml = `
               <div style="display: flex; flex-direction: column;">
                 ${regularPrice > 0 && regularPrice !== effectivePrice ? `<s style="font-size: 0.75rem; color: var(--text-muted); line-height: 1;">${window.formatCurrency(regularPrice)}</s>` : ''}

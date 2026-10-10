@@ -301,25 +301,42 @@ exports.handler = async function(event) {
         }
       }
 
+      // Reconstrói sizes para pizzas com tamanhos
+      let sizesArr = [];
+      if (Array.isArray(prod.sizes) && prod.sizes.length > 0) {
+        sizesArr = prod.sizes;
+      } else if (prod.has_sizes) {
+        const pP = (prod.price_p !== null && prod.price_p !== undefined && prod.price_p !== '') ? Number(prod.price_p) : Number(prod.price || 0);
+        const pM = (prod.price_m !== null && prod.price_m !== undefined && prod.price_m !== '') ? Number(prod.price_m) : 0;
+        const pG = (prod.price_g !== null && prod.price_g !== undefined && prod.price_g !== '') ? Number(prod.price_g) : 0;
+        if (pP > 0 || pM > 0 || pG > 0) {
+          sizesArr = [
+            { size_key: 'P', name: 'P (Pequena)', price: pP },
+            { size_key: 'M', name: 'M (Média)', price: pM },
+            { size_key: 'G', name: 'G (Grande)', price: pG }
+          ];
+        }
+      }
+
+      // Payload usando APENAS colunas conhecidas do schema real do banco
       const cleanPayload = {
         name: String(prod.name || '').trim(),
         category_id: categoryId,
         description: prod.description ? String(prod.description).trim() : '',
         price: (prod.price !== null && prod.price !== undefined && prod.price !== '') ? Number(prod.price) : null,
+        price_p: (prod.price_p !== null && prod.price_p !== undefined && prod.price_p !== '') ? Number(prod.price_p) : null,
+        price_m: (prod.price_m !== null && prod.price_m !== undefined && prod.price_m !== '') ? Number(prod.price_m) : null,
+        price_g: (prod.price_g !== null && prod.price_g !== undefined && prod.price_g !== '') ? Number(prod.price_g) : null,
+        has_sizes: Boolean(prod.has_sizes),
+        sizes: sizesArr,
         image_url: prod.image_url ? String(prod.image_url).trim() : null,
         is_available: prod.is_available !== false,
         is_active: prod.is_active !== false,
         is_promo: Boolean(prod.is_promo),
         promo_days: Array.isArray(prod.promo_days) ? prod.promo_days : [],
         promo_price: (prod.promo_price !== null && prod.promo_price !== undefined && prod.promo_price !== '') ? Number(prod.promo_price) : null,
-        promo_label: prod.promo_label ? String(prod.promo_label).trim() : null,
         monday_price: (prod.monday_price !== null && prod.monday_price !== undefined && prod.monday_price !== '') ? Number(prod.monday_price) : null,
         sales_channel: prod.sales_channel ? String(prod.sales_channel).trim() : 'todos',
-        customization_type: prod.customization_type ? String(prod.customization_type).trim() : 'none',
-        customization_label: prod.customization_label ? String(prod.customization_label).trim() : null,
-        customization_max_qty: (prod.customization_max_qty !== null && prod.customization_max_qty !== undefined && prod.customization_max_qty !== '') ? Number(prod.customization_max_qty) : 1,
-        customization_options: Array.isArray(prod.customization_options) ? prod.customization_options : [],
-        burger_type: prod.burger_type ? String(prod.burger_type).trim() : null,
         order_index: Number(prod.order_index) || 0,
         updated_at: new Date().toISOString()
       };
@@ -336,30 +353,75 @@ exports.handler = async function(event) {
           });
         }
       } catch (err) {
-        console.warn('Falha ao salvar produto completo no Supabase, tentando campos padrão:', err.message);
+        console.warn('Falha ao salvar produto completo, tentando payload sem colunas opcionais:', err.message);
+        // Fallback 1: sem has_sizes/sizes (caso essas colunas não existam no DB)
         const safePayload = {
           name: cleanPayload.name,
           category_id: cleanPayload.category_id,
           description: cleanPayload.description,
           price: cleanPayload.price,
+          price_p: cleanPayload.price_p,
+          price_m: cleanPayload.price_m,
+          price_g: cleanPayload.price_g,
           image_url: cleanPayload.image_url,
           is_available: cleanPayload.is_available,
           is_active: cleanPayload.is_active,
           is_promo: cleanPayload.is_promo,
+          promo_days: cleanPayload.promo_days,
+          promo_price: cleanPayload.promo_price,
+          monday_price: cleanPayload.monday_price,
           order_index: cleanPayload.order_index,
           updated_at: cleanPayload.updated_at
         };
-        if (isExistingUuid) {
-          data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
-            method: 'PATCH', body: JSON.stringify(safePayload)
-          });
-        } else {
-          data = await supabaseFetch('/products', {
-            method: 'POST', body: JSON.stringify(safePayload)
-          });
+        try {
+          if (isExistingUuid) {
+            data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
+              method: 'PATCH', body: JSON.stringify(safePayload)
+            });
+          } else {
+            data = await supabaseFetch('/products', {
+              method: 'POST', body: JSON.stringify(safePayload)
+            });
+          }
+        } catch (err2) {
+          console.warn('Fallback 1 falhou, tentando payload mínimo:', err2.message);
+          // Fallback 2: payload absolutamente mínimo
+          const minPayload = {
+            name: cleanPayload.name,
+            category_id: cleanPayload.category_id,
+            description: cleanPayload.description,
+            price: cleanPayload.price,
+            image_url: cleanPayload.image_url,
+            is_available: cleanPayload.is_available,
+            is_active: cleanPayload.is_active,
+            is_promo: cleanPayload.is_promo,
+            promo_days: cleanPayload.promo_days,
+            promo_price: cleanPayload.promo_price,
+            monday_price: cleanPayload.monday_price,
+            order_index: cleanPayload.order_index,
+            updated_at: cleanPayload.updated_at
+          };
+          if (isExistingUuid) {
+            data = await supabaseFetch(`/products?id=eq.${prod.id}`, {
+              method: 'PATCH', body: JSON.stringify(minPayload)
+            });
+          } else {
+            data = await supabaseFetch('/products', {
+              method: 'POST', body: JSON.stringify(minPayload)
+            });
+          }
         }
       }
-      return respond(200, { data: Array.isArray(data) ? data[0] : data });
+      // Retorna produto salvo com campos opcionais mesclados para consistência no front-end
+      const savedProduct = Array.isArray(data) ? data[0] : data;
+      if (savedProduct) {
+        if (savedProduct.has_sizes === undefined) savedProduct.has_sizes = cleanPayload.has_sizes;
+        if (!savedProduct.sizes || savedProduct.sizes.length === 0) savedProduct.sizes = cleanPayload.sizes;
+        if (savedProduct.price_p === undefined) savedProduct.price_p = cleanPayload.price_p;
+        if (savedProduct.price_m === undefined) savedProduct.price_m = cleanPayload.price_m;
+        if (savedProduct.price_g === undefined) savedProduct.price_g = cleanPayload.price_g;
+      }
+      return respond(200, { data: savedProduct });
     }
 
     // -------------------------------------------------------
