@@ -727,6 +727,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // MODAL DE PRODUTO & TAMANHOS (PIZZA FRITA)
   // ==========================================
   function getEffectiveSizePrice(product, sizeObj) {
+    if (window.getEffectiveSizePrice) {
+      return window.getEffectiveSizePrice(product, sizeObj);
+    }
     if (!product || !sizeObj) return 0;
     const todayDay = new Date().getDay();
     const promoDays = window.normalizePromoDays

@@ -107,6 +107,27 @@ window.getProductEffectivePrice = function(product, todayDay) {
   return regularPrice > 0 ? regularPrice : (promoPrice > 0 ? promoPrice : 0);
 };
 
+// Retorna o preço efetivo de um tamanho considerando promoção do dia atual
+window.getEffectiveSizePrice = function(product, sizeObj, todayDay) {
+  if (!product || !sizeObj) return 0;
+  if (todayDay === undefined || todayDay === null) {
+    todayDay = new Date().getDay();
+  } else {
+    todayDay = Number(todayDay);
+  }
+  const promoDays = window.normalizePromoDays
+    ? window.normalizePromoDays(product.promo_days, product.monday_price)
+    : (Array.isArray(product.promo_days) ? product.promo_days.map(Number) : (product.monday_price ? [1] : []));
+  const isPromoToday = product.is_promo !== false && promoDays.includes(todayDay);
+  const regPrice = Number(sizeObj.price) || 0;
+  if (isPromoToday) {
+    const pSizePromo = sizeObj.promo_price || (sizeObj.size_key === 'P' ? product.promo_price_p : sizeObj.size_key === 'M' ? product.promo_price_m : product.promo_price_g);
+    if (pSizePromo && Number(pSizePromo) > 0) return Number(pSizePromo);
+    if (product.promo_price && Number(product.promo_price) > 0) return Number(product.promo_price);
+  }
+  return regPrice;
+};
+
 // Otimiza URLs de imagens para formato WebP ultraleve
 window.optimizeImageUrl = function(url, options = {}) {
   if (!url || typeof url !== 'string') return 'logo.jpg';

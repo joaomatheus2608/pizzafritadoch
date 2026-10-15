@@ -33,18 +33,37 @@
     },
 
     addItem(product, quantity = 1, optionals = [], notes = '', comboChoices = [], flavor = '', selectedSize = null) {
-      let itemPrice = Number(product.price) || 0;
+      // Prioridade 1: preserva o preço efetivo já calculado (ex: app.js com promoção do dia)
+      let itemPrice = (product.price !== undefined && product.price !== null && !isNaN(product.price) && Number(product.price) > 0)
+        ? Number(product.price)
+        : 0;
       let sizeLabel = '';
 
       if (selectedSize) {
         if (typeof selectedSize === 'object') {
-          itemPrice = Number(selectedSize.price) || itemPrice;
           sizeLabel = selectedSize.name || selectedSize.size_key || '';
+          // Se o produto não teve preço pré-calculado, calcula com base no tamanho e promoção do dia
+          if (itemPrice <= 0) {
+            if (window.getEffectiveSizePrice) {
+              itemPrice = window.getEffectiveSizePrice(product, selectedSize);
+            } else {
+              itemPrice = Number(selectedSize.price) || 0;
+            }
+          }
         } else if (typeof selectedSize === 'string') {
           sizeLabel = selectedSize;
-          if (selectedSize === 'P' && product.price_p) itemPrice = Number(product.price_p);
-          else if (selectedSize === 'M' && product.price_m) itemPrice = Number(product.price_m);
-          else if (selectedSize === 'G' && product.price_g) itemPrice = Number(product.price_g);
+          if (itemPrice <= 0) {
+            const sizeObj = {
+              size_key: selectedSize,
+              price: selectedSize === 'P' ? product.price_p : selectedSize === 'M' ? product.price_m : product.price_g,
+              promo_price: selectedSize === 'P' ? product.promo_price_p : selectedSize === 'M' ? product.promo_price_m : product.promo_price_g
+            };
+            if (window.getEffectiveSizePrice) {
+              itemPrice = window.getEffectiveSizePrice(product, sizeObj);
+            } else {
+              itemPrice = Number(sizeObj.price) || 0;
+            }
+          }
         }
       }
 
